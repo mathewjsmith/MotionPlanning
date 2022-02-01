@@ -91,8 +91,8 @@ function generate()
 
     i = 0
 
-    dims = (5, 5)
-    ns   = 5:15
+    dims = (4, 4)
+    ns   = 4:15
 
     for n in ns
         for spread in spreads
@@ -108,8 +108,8 @@ function generate()
         end
     end
 
-    dims = (10, 10)
-    ns   = 10:5:30
+    dims = (8, 8)
+    ns   = 4:4:44
 
     for n in ns
         for spread in spreads
@@ -125,8 +125,8 @@ function generate()
         end
     end
 
-    dims = (20, 20)
-    ns   = 25:25:125
+    dims = (16, 16)
+    ns   = 16:16:144
 
     for n in ns
         for spread in spreads
@@ -141,8 +141,6 @@ function generate()
             end
         end
     end
-
-
 
 end
 
