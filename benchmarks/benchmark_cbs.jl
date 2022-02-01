@@ -62,13 +62,14 @@ try
         algorithm,
         inst.name, 
         inst.dims,
-        length(inst.robots),                                              # nrobots
-        solution,                                                         # solution
-        result.time,                                                      # time
-        nothing,                                                          # ϵ
-        isnothing(result.value) ? 0 : makespan(solution, :solution),      # makespan
-        isnothing(result.value) ? 0 : totaldist(solution, :solution),     # totalmoves
-        max                                                               # degree of coupling
+        length(inst.robots),                                                # nrobots
+        solution,                                                           # solution
+        result.time,                                                        # time
+        nothing,                                                            # ϵ
+        isnothing(result.value) ? nothing : makespan(solution, :solution),  # makespan
+        isnothing(result.value) ? nothing : totaldist(solution, :solution), # totalmoves
+        max,                                                                # max degree of coupling
+        mean                                                                # avg degree of coupling
     )
 
     writebenchmark(bm, "benchmarks/results")
@@ -84,9 +85,10 @@ catch e
         nothing,             # solution
         timeout,             # time
         nothing,             # ϵ
-        0,                   # makespan
-        0,                   # totalmoves
-        -1                   # degree of coupling
+        nothing,             # makespan
+        nothing,             # totalmoves
+        nothing,             # max degree of coupling
+        nothing              # mean degree of coupling
     )
 
     writebenchmark(bm, "benchmarks/results")

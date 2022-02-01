@@ -6,13 +6,11 @@ using MotionPlanning.Model
 using MotionPlanning.MultiRobotPlanning.Graph
 
 using JSON2
-using StatsBase
 
 export
     Benchmark,
     writebenchmark, 
     readbenchmark,
-    random,
     Generators
 
 
@@ -26,7 +24,8 @@ struct Benchmark
     ϵ            :: Union{Int64, Nothing}
     makespan     :: Union{Int64, Nothing}
     totalmoves   :: Union{Int64, Nothing}
-    kappa        :: Union{Int64, Nothing}
+    maxkappa     :: Union{Int64, Nothing}
+    avgkappa     :: Union{Float64, Nothing}
 end
 
 
@@ -42,30 +41,6 @@ function readbenchmark(filename::String)
     open(filename) do file
         JSON2.read(file, Benchmark)
     end
-end
-
-
-"""
-Generates a random MRMP instance based on the specified parameters.
-"""
-function random(nrobots, nobstacles, width, height, id)
-    cells = [ (x, y) for x in 0 : width - 1, y in 0 : height - 1 ]
-
-    positions = sample(cells, nrobots; replace = false)
-
-    targets = sample(cells, nrobots; replace = false)
-
-    robots = [
-        Robot(id, pos, target)
-        for (id, (pos, target)) in enumerate(zip(positions, targets))
-    ]
-
-    obstacles = [
-        Obstacle(id, pos)
-        for (id, pos) in enumerate(sample(setdiff(cells, positions, targets), nobstacles; replace = false))
-    ]
-
-    MRMPInstance("random_$(nrobots)_$(nobstacles)_$(width)x$(height)_$id", robots, obstacles)
 end
 
 
