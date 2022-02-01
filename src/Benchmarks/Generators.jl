@@ -109,7 +109,7 @@ function generate()
     end
 
     dims = (8, 8)
-    ns   = 4:4:44
+    ns   = [ collect(4:15); collect(16:4:44) ]
 
     for n in ns
         for spread in spreads
