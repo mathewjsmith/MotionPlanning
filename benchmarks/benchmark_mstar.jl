@@ -34,7 +34,7 @@ objective = MakeSpan()
 
 heuristic = MaxDist()
 
-timeout = 300 # seconds
+timeout = 600 # seconds
 
 
 # run the algorithm on an easy instance to eliminate overhead from compiling
@@ -62,18 +62,18 @@ try
         solution = nothing
     end
 
-
     bm = Benchmark(
         algorithm,
         inst.name, 
         inst.dims,
-        length(inst.robots),                                             # nrobots
-        solution,                                                        # solution
-        result.time,                                                     # time
-        nothing,                                                         # ϵ
-        isnothing(solution) ? 0 : makespan(solution, :solution),         # makespan
-        isnothing(solution) ? 0 : totaldist(solution, :solution),        # totalmoves
-        max                                                              # degree of coupling
+        length(inst.robots),                                                # nrobots
+        solution,                                                           # solution
+        result.time,                                                        # time
+        nothing,                                                            # ϵ
+        isnothing(result.value) ? nothing : makespan(solution, :solution),  # makespan
+        isnothing(result.value) ? nothing : totaldist(solution, :solution), # totalmoves
+        max,                                                                # max degree of coupling
+        mean                                                                # avg degree of coupling
     )
 
     writebenchmark(bm, "benchmarks/results")
@@ -89,9 +89,10 @@ catch e
         nothing,             # solution
         timeout,             # time
         nothing,             # ϵ
-        0,                   # makespan
-        0,                   # totalmoves
-        -1                   # degree of coupling
+        nothing,             # makespan
+        nothing,             # totalmoves
+        nothing,             # max degree of coupling
+        nothing              # mean degree of coupling
     )
 
     writebenchmark(bm, "benchmarks/results")

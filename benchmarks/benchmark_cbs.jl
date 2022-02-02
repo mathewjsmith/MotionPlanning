@@ -56,7 +56,7 @@ try
 
     constraints = result.value[2]
 
-    (min, max, mean) = κ(solution, constraints, inst)
+    min, max, mean = κ(solution, constraints, inst)
 
     bm = Benchmark(
         algorithm,
