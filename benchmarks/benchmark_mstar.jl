@@ -34,7 +34,7 @@ objective = MakeSpan()
 
 heuristic = MaxDist()
 
-timeout = 300 # seconds
+timeout = 600 # seconds
 
 
 # run the algorithm on an easy instance to eliminate overhead from compiling
