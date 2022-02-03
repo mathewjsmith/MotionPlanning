@@ -50,7 +50,7 @@ try
     result = @timed plan(inst)
 
     if !isnothing(result.value)
-        solution, G, path = result.value
+        solution = result.value
     else
         solution = nothing
     end
@@ -72,7 +72,6 @@ try
     writebenchmark(bm, "benchmarks/results")
 
     println("completed in $(bm.time) seconds with a makespan of $(bm.makespan) and $(bm.totalmoves) total moves.")
-    println("$κ --- min: $min, max: $max, mean: $mean")
 catch e
     bm = Benchmark(
         algorithm,
