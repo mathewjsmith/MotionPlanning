@@ -23,7 +23,7 @@ An exact algorithm for coordinated motion planning. M* is a variant of A* search
 function mstar(instance::MRMPInstance, O::Objective, H::Heuristic; ϵ::Float64 = 1.0)
     initialconfig = Config([ r.pos for r in instance.robots ])
     goalconfig    = Config([ r.target for r in instance.robots ])
-    shortestpaths = [ ep(r.pos, r.target, instance) for r in instance.robots ]
+    shortestpaths = [ astar(r.pos, r.target, instance) for r in instance.robots ]
 
     f(v::Vertex, w::Vertex)::Cost = weight(O, v.config, w.config)
     h(v::Vertex)::Cost = ϵ .* heuristic(H, v.config, goalconfig)
