@@ -24,6 +24,8 @@ filename = ARGS[1]
 
 inst = readinstance(filename)
 
+inst.dims = (8, 8)
+
 # benchmark parameters.
 
 algorithm = "Shadoks"
@@ -40,7 +42,7 @@ robots = [
 
 deadinst = MRMPInstance("test", robots, Vector{Obstacle}())
 
-plan(deadinst)
+shadoks(deadinst)
 
 # run the benchmark.
 

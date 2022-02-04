@@ -96,13 +96,13 @@ function shadoks(instance::MRMPInstance)
                 inst.obstacles[t] = inst.obstacles[t][Not(r.id)]
             end
 
-            path = ep(r.pos, r.target, inst)
+            path = astar(r.pos, r.target, inst)
 
             if isnothing(path)
                 return nothing
             else
                 paths[r.id] = path
-                addobstacles!(r, path, inst)
+                addobstacles!(r.id, path, inst)
             end
         end
 
