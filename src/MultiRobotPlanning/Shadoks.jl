@@ -48,7 +48,7 @@ function shadoks(instance::MRMPInstance)
             inst.obstacles[t] = inst.obstacles[t][Not(i)]
         end
 
-        path = ep(r.pos, matching[i], inst)
+        path = astar(r.pos, matching[i], inst)
 
         if isnothing(path)
 			return nothing
@@ -63,7 +63,7 @@ function shadoks(instance::MRMPInstance)
             inst.obstacles[t] = inst.obstacles[t][Not(i)]
         end
 
-        path = ep(r.pos, r.target, inst)
+        path = astar(r.pos, r.target, inst)
 
         if isnothing(path)
             return nothing

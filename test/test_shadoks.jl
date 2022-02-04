@@ -33,22 +33,22 @@ using MotionPlanning.MultiRobotPlanning.Shadoks
 		@test !hascollisions(solution, instance; ignoreobstacles=true)
     end
 
-    # @testset "cluster-of-five scenario" begin
-    #     robots = [
-    #         Robot(1, (1, 1), (1, 1)),
-    #         Robot(2, (0, 1), (2, 1)),
-    #         Robot(3, (2, 1), (0, 1)),
-    #         Robot(4, (1, 0), (1, 2)),
-    #         Robot(5, (1, 2), (1, 0)),
-    #     ]
+    @testset "cluster-of-five scenario" begin
+        robots = [
+            Robot(1, (1, 1), (1, 1)),
+            Robot(2, (0, 1), (2, 1)),
+            Robot(3, (2, 1), (0, 1)),
+            Robot(4, (1, 0), (1, 2)),
+            Robot(5, (1, 2), (1, 0)),
+        ]
 
-    #     obstacles = StaticObstacles()
+        obstacles = StaticObstacles()
 
-    #     instance = MRMPInstance("test", robots, obstacles)
-    #     instance.bounded = false
+        instance = MRMPInstance("test", robots, obstacles)
+        instance.bounded = false
 
-    #     solution = shadoks(instance)
+        solution = shadoks(instance)
 
-    #     @test !hascollisions(solution, instance; ignoreobstacles=true)
-    # end
+        @test !hascollisions(solution, instance; ignoreobstacles=true)
+    end
 end
