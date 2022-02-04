@@ -54,7 +54,7 @@ function shadoks(instance::MRMPInstance)
 			return nothing
 		else
             paths[i] = path
-            addobstacles!(r, i, path, inst)
+            addobstacles!(i, path, inst)
         end
     end
 
@@ -69,45 +69,45 @@ function shadoks(instance::MRMPInstance)
             return nothing
         else
             paths[i] = path
-            addobstacles!(r, i, path, inst)
+            addobstacles!(i, path, inst)
         end
     end
 
     sol = plantosolution(collect(values(sort(paths, by=p -> p[1]))))
 
-    # colls = findcollisions(sol, instance; ignoreobstacles=false)
+    colls = findcollisions(sol, instance; ignoreobstacles=false)
 
-    # if !isempty(colls)
-    #     ordering = r -> manhattandist(r.pos, r.target)
+    if !isempty(colls)
+        ordering = r -> manhattandist(r.pos, r.target)
 
-    #     robots = collect(Iterators.flatten([
-    #         if isa(coll, Clash)
-    #             coll.robots
-    #         elseif isa(coll, Overlap)
-    #             filter(!isnothing, [ coll.onrobot, coll.offrobot ])
-    #         end
-    #         for coll in colls
-    #     ]))
+        robots = collect(Iterators.flatten([
+            if isa(coll, Clash)
+                coll.robots
+            elseif isa(coll, Overlap)
+                filter(!isnothing, [ coll.onrobot, coll.offrobot ])
+            end
+            for coll in colls
+        ]))
 
-    #     priority = sort(map(r -> inst.robots[r], robots), by=ordering)
+        priority = sort(map(r -> inst.robots[r], robots), by=ordering)
 
-    #     for r in priority
-    #         for t in 1:length(inst.obstacles)
-    #             inst.obstacles[t] = inst.obstacles[t][Not(r.id)]
-    #         end
+        for r in priority
+            for t in 1:length(inst.obstacles)
+                inst.obstacles[t] = inst.obstacles[t][Not(r.id)]
+            end
 
-    #         path = ep(r.pos, r.target, inst)
+            path = ep(r.pos, r.target, inst)
 
-    #         if isnothing(path)
-    #             return nothing
-    #         else
-    #             paths[r.id] = path
-    #             addobstacles!(r, path, inst)
-    #         end
-    #     end
+            if isnothing(path)
+                return nothing
+            else
+                paths[r.id] = path
+                addobstacles!(r, path, inst)
+            end
+        end
 
-    #     sol = plantosolution(collect(values(sort(paths, by=p -> p[1]))))
-    # end
+        sol = plantosolution(collect(values(sort(paths, by=p -> p[1]))))
+    end
 
     sol
 end
@@ -189,7 +189,7 @@ function match(robots::Vector{Robot}, network::Vector{Pos})
 end
 
 
-function addobstacles!(robot::Robot, i::Int, path::Vector{Pos}, instance::MRMPInstance)
+function addobstacles!(i::Int, path::Vector{Pos}, instance::MRMPInstance)
 	pathlength = length(path)
 	obstlength = length(instance.obstacles)
 
