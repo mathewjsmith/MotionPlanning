@@ -10,13 +10,15 @@ using MotionPlanning.SingleRobotPlanning
 using MotionPlanning.Utils: @timeout
 
 using Distributions
+using Distributed
 using SparseArrayKit
 using StatsBase
 using Statistics
 
 export
     evolve,
-    Params
+    Params,
+    nconstraints
 
 
 struct Params
@@ -66,21 +68,30 @@ function evolve(inst::MRMPInstance, params::Params; maxgens=Inf)
     initsol   = plantosolution(initplan)
     initchrom = zerochrom(chromdims...)
 
-    weights = fill(log(prod(chromdims) * 7) / (prod(chromdims) * 7), chromdims)
+    colls = findcollisions(initsol, inst)
 
-    ncolls = length(findcollisions(initsol, inst))
+    ncolls = length(colls)
 
     if ncolls == 0
         return initsol
     end
 
+    fitness[hash(initchrom)] = f(initchrom, initsol, inst)
+
     for (r, path) in enumerate(initplan)
         paths[hash((r, genes(r, initchrom)))] = path
     end
 
-    fitness[hash(initchrom)] = f(initchrom, initsol, inst)
+    consts = Iterators.flatten(map(conflicttoconstraints, collect(colls)))
 
-    population = populate(params.popsize, weights, chromdims)
+    initpool = map(c -> constraintstomatrix(Constraint[c], chromdims), collect(consts))
+
+    population = rand(initpool, params.popsize)
+
+    # weights = fill(log(prod(chromdims) * 7) / (prod(chromdims) * 7), chromdims)
+    # weights = fill(1 / (prod(chromdims) * 7), chromdims)
+
+    # population = populate(params.popsize, weights, chromdims)
 
     kappa      = 1
     tau        = 1
@@ -110,9 +121,37 @@ function evolve(inst::MRMPInstance, params::Params; maxgens=Inf)
             end
 
             # solve instances and find fitnesses for newly discovered chromosomes
+            # results = @distributed (vcat) for chrom in population
+            # results = pmap(chrom -> begin
+            #     h = hash(chrom)
+
+            #     (sol, newpaths) = solve(paths, chrom, inst)
+
+            #     fit = f(chrom, sol, inst)
+
+            #     ncolls = isnothing(sol) ? Inf : length(findcollisions(sol, inst))
+
+            #     (h, sol, fit, newpaths, ncolls)
+            # end, population)
+
+            # for (h, _, fit, newpaths, ncolls) in results
+            #     if !haskey(fitness, h)
+            #         fitness[h] = fit
+            #     end 
+
+            #     for (gh, path) in newpaths
+            #         paths[gh] = path
+            #     end
+
+            #     if ncolls < mincolls
+            #         mincolls   = ncolls
+            #         lastimprov = 1
+            #     end
+            # end
+                
             for chrom in population
                 h = hash(chrom)
-                
+
                 if !haskey(fitness, h)
                     sol        = solve!(paths, chrom, inst)
                     fitness[h] = f(chrom, sol, inst)
@@ -125,6 +164,17 @@ function evolve(inst::MRMPInstance, params::Params; maxgens=Inf)
                     end
                 end
             end
+
+            # for (h, sol, fit, ncolls) in results
+            #     if sol != :seen
+            #         fitness[h] = fit
+
+            #         if ncolls < mincolls
+            #             mincolls = ncolls
+            #             lastimprov = 1
+            #         end
+            #     end
+            # end
 
             if lastimprov > 1
                 lastimprov += 1
@@ -140,12 +190,12 @@ function evolve(inst::MRMPInstance, params::Params; maxgens=Inf)
 
         order = sort(population, by=chrom -> fitness[hash(chrom)], rev=true)
 
-        (solve!(paths, order[1], inst), order[1])
+        (solve(paths, order[1], inst)[1], order[1])
     end
 
     order = sort(population, by=chrom -> fitness[hash(chrom)], rev=true)
 
-    (solve!(paths, order[1], inst), order[1])
+    (solve(paths, order[1], inst)[1], order[1])
 end
 
 
@@ -334,9 +384,9 @@ function mutate!(chrom::Chromosome, pmut::Float64)
 
     if rand() < pmut
         for r in 1:n, x in 1:w, y in 1:h, t in 1:d
-            if rand() < log(n) / l
+            if rand() < 1 / l
                 for c in constraintvals
-                    if rand() < (1 / 6)
+                    if rand() < (1 / 7)
                         chrom[r, x, y, t] = flip(chrom[r, x, y, t], c)
                     end
                 end
@@ -346,10 +396,53 @@ function mutate!(chrom::Chromosome, pmut::Float64)
 end
 
 
-function solve!(paths::Dict{UInt64, Union{Path, Nothing}}, chrom::Chromosome, inst::MRMPInstance)
-    updatepaths!(paths, chrom, inst)
+function solve(paths::Dict{UInt64, Union{Path, Nothing}}, chrom::Chromosome, inst::MRMPInstance)
+    chrompaths = getpaths(paths, chrom, inst)
+    plan       = map(last, chrompaths)
+    newpaths   = map(t -> (t[2], t[3]), filter(p -> p[2], chrompaths))
 
-    plan = [ paths[hash((r, genes(r, chrom)))] for r in 1:size(chrom)[1] ]
+    (plantosolution(plan), newpaths)
+end
+
+
+function getpaths(paths::Dict{UInt64, Union{Path, Nothing}}, chrom::Chromosome, inst::MRMPInstance)
+    n = size(chrom)[1]
+
+    chrompaths = Vector{Tuple{UInt64, Bool, Path}}()
+
+    # chrompaths = pmap(r -> begin
+    chrompaths = @distributed (vcat) for r in 1:n
+        g = genes(r, chrom)
+        h = hash((r, g))
+
+        if !haskey(paths, h)
+            robot = inst.robots[r]
+            path = astar(robot.pos, robot.target, inst; constmat=chrom, r=r)
+
+            (h, true, path)
+        else
+            path = paths[h]
+
+            (h, false, path)
+        end
+    end
+    # end, 1:n)
+
+    chrompaths
+end
+
+
+function solve!(paths::Dict{UInt64, Union{Path, Nothing}}, chrom::Chromosome, inst::MRMPInstance)
+    chrompaths = getpaths(paths, chrom, inst)
+    plan       = map(last, chrompaths)
+    newpaths   = map(t -> (t[2], t[3]), filter(p -> p[2], chrompaths))
+
+    for (gh, path) in newpaths
+        paths[gh] = path
+    end
+    # updatepaths!(paths, chrom, inst)
+
+    # plan = [ paths[hash((r, genes(r, chrom)))] for r in 1:size(chrom)[1] ]
 
     if any(map(isnothing, plan))
         return nothing
@@ -419,7 +512,7 @@ function weightsfromcollisions(colls::Set{Collision}, chromdims::ChromDims)
 
     Float64[
         # 2 * log(n) * (1 + rand(dist)) * ((r, (x, y), t) ∈ colls ? ℯ : 1) / total
-        rdist[r] * colldist[x, y, t] / n
+        rdist[r] * colldist[x, y, t] / (w * h)
         for r in 1:n, x in 1:w, y in 1:h, t in 1:d
     ]
 end
@@ -504,6 +597,20 @@ function nconstraints(gene::Int16)
     end
 
     n
+end
+
+
+function conflicttoconstraints(conflict::Collision)
+    if isa(conflict, Clash)
+        constraints = map(r -> ClashConstraint(conflict.time, conflict.pos, r), collect(conflict.robots))
+    else isa(conflict, Overlap)
+        left  = isnothing(conflict.onrobot)  ? nothing : OverlapConstraint(conflict.time, conflict.onsrc, conflict.ondst, conflict.onrobot)
+        right = isnothing(conflict.offrobot) ? nothing : OverlapConstraint(conflict.time, conflict.ondst, conflict.offdst, conflict.offrobot)
+
+        constraints = filter(c -> !isnothing(c), [ left, right ])
+    end
+
+    Vector{Constraint}(constraints)
 end
 
 

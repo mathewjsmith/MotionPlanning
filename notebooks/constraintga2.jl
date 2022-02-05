@@ -25,7 +25,10 @@ begin
 end
 
 # ╔═╡ b169a4c0-291f-45dc-b84a-a5031180df21
-inst = readinstance.(glob("../instances/new/rand*n016*c000*"))[1]
+inst = readinstance.(glob("../instances/new/rand*n*12*c000*"))[1]
+
+# ╔═╡ 4acb00e7-2ee7-436b-b1e7-4605d444f4b7
+inst.dims = (8, 8)
 
 # ╔═╡ 0503ba1c-10db-4f17-b52c-aefaa66ec9a1
 initsol = plantosolution([ astar(r.pos, r.target, inst) for r in inst.robots ])
@@ -79,6 +82,7 @@ findcollisions(sol, inst)
 # ╠═22b8f8e0-72f4-11ec-0c12-3f9362497f6c
 # ╠═fa37fa7b-4dcd-4c2c-b76c-659e0828ec24
 # ╠═b169a4c0-291f-45dc-b84a-a5031180df21
+# ╠═4acb00e7-2ee7-436b-b1e7-4605d444f4b7
 # ╠═0503ba1c-10db-4f17-b52c-aefaa66ec9a1
 # ╠═c06777a5-7f13-4c9e-bd69-aade196ef222
 # ╠═6a44d2b4-c917-45c7-a780-13ae17c93c90
