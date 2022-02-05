@@ -102,7 +102,7 @@ function shadoks(instance::MRMPInstance)
                 return nothing
             else
                 paths[r.id] = path
-                addobstacles!(r, path, inst)
+                addobstacles!(r.id, path, inst)
             end
         end
 
