@@ -11,6 +11,7 @@ export
     Plan,
     getconfig,
     plantosolution,
+    solutiontoplan,
     Robot,
     StaticObstacles,
     DynamicObstacles,
@@ -50,6 +51,24 @@ makespan(plan::Plan) = maximum(length(path) for path in plan)
 getconfig(time::Int, plan::Plan) = [ path[min(end, time)] for path in plan ]
 
 plantosolution(plan::Plan) = [ getconfig(time, plan) for time in 1:makespan(plan) ]
+
+solutiontoplan(sol::Solution) = begin
+	n = length(sol[1])
+	l = length(sol)
+	
+	plan = Vector{Tuple{Int, Int}}[]
+	
+	for r in 1:n
+		path = []
+		for t in 1:l
+			push!(path, sol[t][r])
+		end
+
+		push!(plan, path)
+	end
+
+	plan
+end
 
 
 mutable struct Robot

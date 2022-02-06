@@ -27,6 +27,16 @@ filename = ARGS[1]
 
 inst = readinstance(filename)
 
+inst.dims = (8, 8)
+
+
+# load the solution found by the ConstraintGA.
+
+preprocessed = begin
+    garesult = readbenchmark("benchmarks/results/$(inst.name)_ConstraintGA")
+    solutiontoplan(garesult.solution)
+end
+
 
 # benchmark parameters.
 
@@ -50,7 +60,7 @@ cbs(dead_inst)
 try
     print("benchmarking $algorithm on $(inst.name): ")
 
-    preprocessed = evolve(inst, Params(16, 2, 0.95, 0.05, 100); maxgens=256)[1]
+    # preprocessed = evolve(inst, Params(16, 2, 0.95, 0.05, 100); maxgens=256)[1]
 
     result = @timed cbs(inst, preprocessed)
 
@@ -58,19 +68,20 @@ try
 
     constraints = result.value[2]
 
-    (min, max, mean) = κ(solution, constraints, inst)
+    min, max, mean = κ(solution, constraints, inst)
 
     bm = Benchmark(
         algorithm,
         inst.name, 
         inst.dims,
-        length(inst.robots),                                              # nrobots
-        solution,                                                         # solution
-        result.time,                                                      # time
-        nothing,                                                          # ϵ
-        isnothing(result.value) ? 0 : makespan(solution, :solution),      # makespan
-        isnothing(result.value) ? 0 : totaldist(solution, :solution),     # totalmoves
-        max                                                               # degree of coupling
+        length(inst.robots),                                                # nrobots
+        solution,                                                           # solution
+        result.time,                                                        # time
+        nothing,                                                            # ϵ
+        isnothing(result.value) ? nothing : makespan(solution, :solution),  # makespan
+        isnothing(result.value) ? nothing : totaldist(solution, :solution), # totalmoves
+        max,                                                                # max degree of coupling
+        mean                                                                # avg degree of coupling
     )
 
     writebenchmark(bm, "benchmarks/results")
@@ -86,9 +97,10 @@ catch e
         nothing,             # solution
         timeout,             # time
         nothing,             # ϵ
-        0,                   # makespan
-        0,                   # totalmoves
-        -1                   # degree of coupling
+        nothing,             # makespan
+        nothing,             # totalmoves
+        nothing,             # max degree of coupling
+        nothing              # mean degree of coupling
     )
 
     writebenchmark(bm, "benchmarks/results")
