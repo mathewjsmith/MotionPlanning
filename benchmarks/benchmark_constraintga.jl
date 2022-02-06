@@ -49,7 +49,7 @@ end
     try
         print("benchmarking $algorithm on $(inst.name): ")
 
-        result = @timed evolve(inst, params; maxgens=256)
+        result = @timed evolve(inst, params; maxgens=1024)
 
         if !isnothing(result.value)
             solution, chrom = result.value

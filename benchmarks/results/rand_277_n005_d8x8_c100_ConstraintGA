@@ -1,0 +1,1 @@
+{"algorithm":"ConstraintGA","instancename":"rand_277_n005_d8x8_c100","dims":[8,8],"nrobots":5,"solution":[[[7,5],[6,3],[7,3],[4,5],[7,4]],[[7,5],[6,4],[7,3],[4,4],[7,5]],[[7,4],[6,4],[7,3],[4,3],[7,5]],[[7,4],[6,4],[7,3],[5,3],[7,5]]],"time":63.639188351,"ϵ":null,"makespan":4,"totalmoves":6,"maxkappa":1,"avgkappa":null}
