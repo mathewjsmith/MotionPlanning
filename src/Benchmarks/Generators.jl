@@ -89,44 +89,45 @@ function generate()
 
     makename(i, n, dims, spread) = "rand_$(lpad(i, 3, "0"))_n$(lpad(n, 3, "0"))_d$(dims[1])x$(dims[2])_c$(spreadname[spread])"
 
-    i = 0
+    # i = 0
 
-    dims = (4, 4)
-    ns   = 4:15
+    # dims = (4, 4)
+    # ns   = 4:15
 
-    for n in ns
-        for spread in spreads
-            for _ in 1:5
-                name     = makename(i, n, dims, spread)
-                inst     = generate(n, dims, spread, name)
-                filename = "instances/new/$(name).instance.json"
+    # for n in ns
+    #     for spread in spreads
+    #         for _ in 1:5
+    #             name     = makename(i, n, dims, spread)
+    #             inst     = generate(n, dims, spread, name)
+    #             filename = "instances/new/$(name).instance.json"
 
-                writeinstance(inst, filename)
+    #             writeinstance(inst, filename)
 
-                i += 1
-            end
-        end
-    end
+    #             i += 1
+    #         end
+    #     end
+    # end
 
-    dims = (8, 8)
-    ns   = [ collect(4:15); collect(16:4:44) ]
+    # dims = (8, 8)
+    # ns   = [ collect(4:15); collect(16:4:44) ]
 
-    for n in ns
-        for spread in spreads
-            for _ in 1:5
-                name     = makename(i, n, dims, spread)
-                inst     = generate(n, dims, spread, name)
-                filename = "instances/new/$(name).instance.json"
+    # for n in ns
+    #     for spread in spreads
+    #         for _ in 1:5
+    #             name     = makename(i, n, dims, spread)
+    #             inst     = generate(n, dims, spread, name)
+    #             filename = "instances/new/$(name).instance.json"
 
-                writeinstance(inst, filename)
+    #             writeinstance(inst, filename)
 
-                i += 1
-            end
-        end
-    end
+    #             i += 1
+    #         end
+    #     end
+    # end
 
+    i = 820
     dims = (16, 16)
-    ns   = 16:16:144
+    ns   = 17:31
 
     for n in ns
         for spread in spreads
