@@ -82,14 +82,19 @@ function evolve(inst::MRMPInstance, params::Params; maxgens=Inf)
         paths[hash((r, genes(r, initchrom)))] = path
     end
 
-    consts = Iterators.flatten(map(conflicttoconstraints, collect(colls)))
+    consts = collect(Iterators.flatten(map(conflicttoconstraints, collect(colls))))
+    println(length(consts))
 
-    initpool = map(c -> constraintstomatrix(Constraint[c], chromdims), collect(consts))
+    population = let 
+        k = max(2, ceil(Int, log(n)))
+        pairs = mapslices(c -> [c], rand(collect(consts), (params.popsize, k)), dims=2)[:]
+        map(c -> constraintstomatrix(Constraint[c...], chromdims), pairs)
+    end
 
-    population = rand(initpool, params.popsize)
+    # population = rand(initpool, params.popsize)
 
-    # weights = fill(log(prod(chromdims) * 7) / (prod(chromdims) * 7), chromdims)
-    # weights = fill(1 / (prod(chromdims) * 7), chromdims)
+    # weights = fill(log(prod(chromdims)) / (prod(chromdims)), chromdims)
+    # weights = fill(1 / (prod(chromdims)), chromdims)
 
     # population = populate(params.popsize, weights, chromdims)
 
@@ -183,7 +188,11 @@ function evolve(inst::MRMPInstance, params::Params; maxgens=Inf)
             generation += 1
             diversity   = length(unique(population)) / length(population)
             kappa       = maximum([ sum(sum(chrom[r, :, :, :]) > 0 for r in 1 : n) for chrom in population ])
-            tau         = maximum([ sum([ nconstraints(g) for g in chrom ]) for chrom in population ])
+            tau         = mean([ sum([ nconstraints(g) for g in chrom ]) for chrom in population ])
+
+            if mincolls == 0
+                break
+            end
         end
     catch _
         println("interrupted")
@@ -204,13 +213,13 @@ function f(chrom::Chromosome, sol::Union{Solution, Nothing}, inst::MRMPInstance)
         [ 0.0, 0.0, 0.0 ]
     else
         colls   = length(findcollisions(sol, inst))
-        sumdist = totaldist(sol, :solution)
         maxdist = makespan(sol, :solution)
+        sumdist = totaldist(sol, :solution)
         tau     = sum([ nconstraints(g) for g in chrom ])
 
         sig(x) = exp(-x) / (1 + exp(-x))
 
-        [ sig(colls), sig(tau), sig(sumdist), sig(maxdist) ]
+        [ sig(colls), sig(tau), sig(maxdist), sig(sumdist) ]
     end
 end
 
@@ -225,7 +234,7 @@ function populate(popsize::Int, weights, chromdims)
                 g = 0
 
                 for c in constraintvals
-                    g = rand() < (1 / 5) ? xmult(g, c) : g
+                    g = rand() < (1 / 6) ? xmult(g, c) : g
                 end
 
                 chrom[r, x, y, t] = g
@@ -288,7 +297,7 @@ function reproduce(selection::Vector{Chromosome}, params::Params, paths::Dict{UI
         begin
             parents   = sample(selection, 2)
 
-            mutmut = 0.5 + exp(min(lastimprov^2, gen) / gen) / (1 + exp(lastimprov / gen))
+            mutmut = 1 + exp(min(lastimprov^2, gen) / gen) / (1 + exp(min(lastimprov^2, gen) / gen))
 
             offspring = crossover(parents..., paths, inst, params.pcross)
 
@@ -384,9 +393,9 @@ function mutate!(chrom::Chromosome, pmut::Float64)
 
     if rand() < pmut
         for r in 1:n, x in 1:w, y in 1:h, t in 1:d
-            if rand() < 1 / l
+            if rand() < 1 / log2(l)
                 for c in constraintvals
-                    if rand() < (1 / 7)
+                    if rand() < (1 / 6)
                         chrom[r, x, y, t] = flip(chrom[r, x, y, t], c)
                     end
                 end
@@ -502,7 +511,7 @@ function weightsfromcollisions(colls::Set{Collision}, chromdims::ChromDims)
 
     total = sum(values(rcolls))
 
-    rdist = map(r -> (total - rcolls[r]) / total, 1:n)
+    rdist = map(r -> rcolls[r] / total, 1:n)
 
     for x in 1:w, y in 1:h, t in 1:d
         colldist[(x, y, t)] = (maxdist - collisiondist((x, y, t), collvecs)) / maxdist
@@ -512,7 +521,7 @@ function weightsfromcollisions(colls::Set{Collision}, chromdims::ChromDims)
 
     Float64[
         # 2 * log(n) * (1 + rand(dist)) * ((r, (x, y), t) ∈ colls ? ℯ : 1) / total
-        rdist[r] * colldist[x, y, t] / (w * h)
+        (( 1 + rdist[r]) * colldist[x, y, t]) / (n * w * h)
         for r in 1:n, x in 1:w, y in 1:h, t in 1:d
     ]
 end
