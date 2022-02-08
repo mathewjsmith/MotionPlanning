@@ -25,10 +25,10 @@ begin
 end
 
 # ╔═╡ b169a4c0-291f-45dc-b84a-a5031180df21
-inst = readinstance.(glob("../instances/new/rand*n*12*c000*"))[1]
+inst = readinstance.(glob("../instances/new/rand*n032*d16x16*c000*"))[1]
 
 # ╔═╡ 4acb00e7-2ee7-436b-b1e7-4605d444f4b7
-inst.dims = (8, 8)
+inst.dims = (16, 16)
 
 # ╔═╡ 0503ba1c-10db-4f17-b52c-aefaa66ec9a1
 initsol = plantosolution([ astar(r.pos, r.target, inst) for r in inst.robots ])
@@ -43,7 +43,7 @@ findcollisions(initsol, inst)
 length(findcollisions(initsol, inst))
 
 # ╔═╡ a5279a84-aeb2-4699-a1ca-cfc8aeac3f44
-sol = evolve(inst, Params(32, 4, 0.95, 0.01, 30))[1]
+sol = evolve(inst, Params(32, 4, 0.95, 0.01, 30); maxgens=1024)[1]
 
 # ╔═╡ d3e57d3c-2803-495d-8a4b-8cb70df94c0b
 makespan(sol, :solution)
