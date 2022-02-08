@@ -26,6 +26,8 @@ filename = ARGS[1]
 
 inst = readinstance(filename)
 
+inst.dims = (16, 16)
+
 
 # benchmark parameters.
 
