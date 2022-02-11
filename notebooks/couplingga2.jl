@@ -37,7 +37,7 @@ makespan(initsol, :solution)
 length(findcollisions(initsol, inst))
 
 # ╔═╡ 6219c0df-26b9-4667-8586-1217d02fb7fa
-sol = evolve(inst, Params(32, 4, 0.95, 0.9, 5))
+sol = evolve(inst, Params(32, 4, 0.95, 0.9, 5); maxgens=256)
 
 # ╔═╡ 896fe78e-52f1-4f46-8a9d-3493a402d2a2
 makespan(sol, :solution)
