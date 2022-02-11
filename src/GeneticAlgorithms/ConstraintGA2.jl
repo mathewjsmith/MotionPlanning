@@ -115,7 +115,7 @@ function evolve(inst::MRMPInstance, params::Params; maxgens=Inf, kinit=nothing)
 
     stats = GAStats[GAStats(0.0, 0.0, mincolls, 1, 1)]
 
-    # try
+    try
         while generation < maxgens
             # println("generation: $generation, kappa: $k, best: $mincolls, constraints: $constraints, diversity: $diversity")
             println("generation: $generation, kappa: $kappa, tau: $tau, best: $mincolls, diversity: $diversity")
@@ -209,13 +209,13 @@ function evolve(inst::MRMPInstance, params::Params; maxgens=Inf, kinit=nothing)
                 break
             end
         end
-    # catch _
-    #     println("interrupted")
+    catch _
+        println("interrupted")
 
-    #     order = sort(population, by=chrom -> fitness[hash(chrom)], rev=true)
+        order = sort(population, by=chrom -> fitness[hash(chrom)], rev=true)
 
-    #     (solve(paths, order[1], inst)[1], order[1], stats)
-    # end
+        (solve(paths, order[1], inst)[1], order[1], stats)
+    end
 
     order = sort(population, by=chrom -> fitness[hash(chrom)], rev=true)
 
