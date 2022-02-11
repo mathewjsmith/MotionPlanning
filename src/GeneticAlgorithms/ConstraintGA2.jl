@@ -30,6 +30,15 @@ struct Params
 end
 
 
+struct GAStats
+    bestfitness  :: Float64
+    meanfitness  :: Float64
+    mincolls     :: Int64
+    nconstraints :: Float64
+    diversity    :: Float64
+end
+
+
 const Chromosome = ConstraintMatrix
 
 
@@ -54,7 +63,7 @@ genes(r::Int, pos::Pos, t::Int, chrom::Chromosome) = chrom[r, pos[1], pos[2], t]
 const constraintvals = [ 2, 3, 5, 7, 11, 13 ]
 
 
-function evolve(inst::MRMPInstance, params::Params; maxgens=Inf)
+function evolve(inst::MRMPInstance, params::Params; maxgens=Inf, kinit=nothing)
     n    = length(inst.robots)
     w, h = inst.dims
     d    = 2 * (w + h)
@@ -86,7 +95,7 @@ function evolve(inst::MRMPInstance, params::Params; maxgens=Inf)
     println(length(consts))
 
     population = let 
-        k = max(2, ceil(Int, log(n)))
+        k = isnothing(kinit) ? max(2, ceil(Int, log(ncolls))) : kinit
         pairs = mapslices(c -> [c], rand(collect(consts), (params.popsize, k)), dims=2)[:]
         map(c -> constraintstomatrix(Constraint[c...], chromdims), pairs)
     end
@@ -105,7 +114,9 @@ function evolve(inst::MRMPInstance, params::Params; maxgens=Inf)
     mincolls   = ncolls
     diversity  = length(unique(population)) / length(population)
 
-    try
+    stats = GAStats[GAStats(0.0, 0.0, mincolls, 1, 1)]
+
+    # try
         while generation < maxgens
             # println("generation: $generation, kappa: $k, best: $mincolls, constraints: $constraints, diversity: $diversity")
             println("generation: $generation, kappa: $kappa, tau: $tau, best: $mincolls, diversity: $diversity")
@@ -191,21 +202,34 @@ function evolve(inst::MRMPInstance, params::Params; maxgens=Inf)
             kappa       = maximum([ sum(sum(chrom[r, :, :, :]) > 0 for r in 1 : n) for chrom in population ])
             tau         = mean([ sum([ nconstraints(g) for g in chrom ]) for chrom in population ])
 
+            fitnesses = map(chrom -> first(fitness[hash(chrom)]), population)
+
+            push!(stats, GAStats(maximum(fitnesses), mean(fitnesses), mincolls, tau, diversity))
+
             if mincolls == 0
                 break
             end
         end
-    catch _
-        println("interrupted")
+    # catch _
+    #     println("interrupted")
 
-        order = sort(population, by=chrom -> fitness[hash(chrom)], rev=true)
+    #     order = sort(population, by=chrom -> fitness[hash(chrom)], rev=true)
 
-        (solve(paths, order[1], inst)[1], order[1])
-    end
+    #     (solve(paths, order[1], inst)[1], order[1], stats)
+    # end
 
     order = sort(population, by=chrom -> fitness[hash(chrom)], rev=true)
 
-    (solve(paths, order[1], inst)[1], order[1])
+    (solve(paths, order[1], inst)[1], order[1], stats)
+end
+
+
+sig(x) = 1 / (1 + exp(-x))
+
+
+relent(c, n, maxdist, q) = let
+	p = c / (n * maxdist)
+	p * log2(p / q) + (1 - p) * log2((1 - p) / (1 - q))
 end
 
 
@@ -213,14 +237,18 @@ function f(chrom::Chromosome, sol::Union{Solution, Nothing}, inst::MRMPInstance)
     if isnothing(sol)
         [ 0.0, 0.0, 0.0 ]
     else
-        colls   = length(findcollisions(sol, inst))
-        maxdist = makespan(sol, :solution)
-        sumdist = totaldist(sol, :solution)
-        tau     = sum([ nconstraints(g) for g in chrom ])
+        colls     = length(findcollisions(sol, inst))
 
-        sig(x) = exp(-x) / (1 + exp(-x))
+        if colls == 0
+            1.0
+        else
+            n         = size(chrom)[1]
+            maxdist   = makespan(sol, :solution)
+            # sumdist    = totaldist(sol, :solution)
+            tau       = sum([ nconstraints(g) for g in chrom ])
 
-        [ sig(colls), sig(tau), sig(maxdist), sig(sumdist) ]
+            [ relent(colls, n, maxdist, 0.76) ]#* (1 - sig(tau / prod(size(chrom)))) ]
+        end
     end
 end
 
@@ -249,37 +277,56 @@ end
 
 
 function select(population::Vector{Chromosome}, fitnesses::Vector{Vector{Float64}}, params::Params, gen, lastimprov)
-    n = params.popsize
     m = params.popsize - params.nelites
 
-    # total     = sum(fitnesses)
-    # mean      = total / n
-    # sd        = stdm(fitnesses, mean)
+    # ranking = sort(1 : n, by=i -> fitnesses[i])
+    # rank(i) = findfirst(r -> r == i, ranking)
 
-    # sigma(fit) = sd == 0 ? 1.0 : (1 + (fit - mean) / 2sd)
+    # amax = 1.2
+    # amin = 0.8
 
-    # sigmas     = map(sigma, fitnesses)
-    # sigmas     = map(e -> e < 0 ? 0.1 : 0, sigmas)
-    # sigmatotal = sum(sigmas)
+    # p(i) = (1 / n) * (amin + (amax - amin) * ((rank(i) - 1) / (n - 1)))
 
-    # weights = map(s -> s / sigmatotal, sigmas)
+    # weights = map(i -> p(i), 1 : n)
 
-    ranking = sort(1 : n, by=i -> fitnesses[i])
-    rank(i) = findfirst(r -> r == i, ranking)
+    fitnesses = map(first, fitnesses)
+    
+    totalfitness = sum(fitnesses)
 
-    amax = 1.2
-    amin = 0.8
+    pointerdist = totalfitness / m
 
-    p(i) = (1 / n) * (amin + (amax - amin) * ((rank(i) - 1) / (n - 1)))
+    start = rand() * pointerdist
 
-    weights = map(i -> p(i), 1 : n)
+    pointers = [ start + i * pointerdist for i in 1 : m -1 ]
 
-    boltzs = map(w -> exp(w / (gen / min(lastimprov^2, gen))), weights)
-    boltzm = sum(boltzs) / length(boltzs)
+    # weights = map(fit -> first(fit) / fitsum, fitnesses)
 
-    weights = map(b -> b / boltzm, boltzs)
 
-    sample(population, Weights(weights), m, replace=false)
+
+    # boltzs = map(w -> exp(w / (gen / min(lastimprov^2, gen))), weights)
+    # boltzm = sum(boltzs) / length(boltzs)
+
+    # weights = map(b -> b / boltzm, boltzs)
+
+    # sample(population, Weights(weights), m, replace=false)
+    roulettewheelselection(population, fitnesses, pointers)
+end
+
+
+function roulettewheelselection(population, fitnesses, pointers)
+    selected = Chromosome[]
+
+    for p in pointers
+        i = 0
+
+        while sum(fitnesses[1 : i]) < p
+            i += 1
+        end
+
+        push!(selected, population[i])
+    end
+
+    selected
 end
 
 
@@ -289,20 +336,24 @@ function selectelites(population::Vector{Chromosome}, fitnesses::Vector{Vector{F
 end
 
 
-function reproduce(selection::Vector{Chromosome}, params::Params, paths::Dict{UInt64, Union{Path, Nothing}}, inst::MRMPInstance, lastimprov, gen)
-    n, w, h, d = size(selection[1])
+logit(x) = log(x / (1 - x))
 
+
+depressure(lastimprov, gen) = 1 + max(0.5, min(0, logit(min(lastimprov^2, gen) / gen)))
+
+
+function reproduce(selection::Vector{Chromosome}, params::Params, paths::Dict{UInt64, Union{Path, Nothing}}, inst::MRMPInstance, lastimprov, gen)
     nchildren = params.popsize - params.nelites
 
     collect(Iterators.flatten([
         begin
             parents   = sample(selection, 2)
 
-            mutmut = 1 + exp(min(lastimprov^2, gen) / gen) / (1 + exp(min(lastimprov^2, gen) / gen))
+            # mutmut = 1 + exp(min(lastimprov^2, gen) / gen) / (1 + exp(min(lastimprov^2, gen) / gen))
 
             offspring = crossover(parents..., paths, inst, params.pcross)
 
-            foreach(child -> mutate!(child, params.pmut * mutmut), offspring)
+            foreach(child -> mutate!(child, params.pmut * depressure(lastimprov, gen)), offspring)
 
             offspring
         end
@@ -418,9 +469,6 @@ end
 function getpaths(paths::Dict{UInt64, Union{Path, Nothing}}, chrom::Chromosome, inst::MRMPInstance)
     n = size(chrom)[1]
 
-    chrompaths = Vector{Tuple{UInt64, Bool, Path}}()
-
-    # chrompaths = pmap(r -> begin
     chrompaths = @distributed (vcat) for r in 1:n
         g = genes(r, chrom)
         h = hash((r, g))
@@ -436,7 +484,6 @@ function getpaths(paths::Dict{UInt64, Union{Path, Nothing}}, chrom::Chromosome, 
             (h, false, path)
         end
     end
-    # end, 1:n)
 
     chrompaths
 end
@@ -450,9 +497,6 @@ function solve!(paths::Dict{UInt64, Union{Path, Nothing}}, chrom::Chromosome, in
     for (gh, path) in newpaths
         paths[gh] = path
     end
-    # updatepaths!(paths, chrom, inst)
-
-    # plan = [ paths[hash((r, genes(r, chrom)))] for r in 1:size(chrom)[1] ]
 
     if any(map(isnothing, plan))
         return nothing
