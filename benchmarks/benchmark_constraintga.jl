@@ -12,86 +12,86 @@ end
 
 @everywhere using MotionPlanning.GeneticAlgorithms.ConstraintGA2
 
-# @everywhere begin
-    using MotionPlanning.Model
-    using MotionPlanning.Benchmarks
-    using MotionPlanning.IO
-    using MotionPlanning.MultiRobotPlanning.Metrics
+using MotionPlanning.Model
+using MotionPlanning.Benchmarks
+using MotionPlanning.IO
+using MotionPlanning.MultiRobotPlanning.Metrics
 
-    using DataStructures
-    using Glob
-
-
-    # this setting makes it possible to send an InterruptException from a bash script.
-
-    Base.exit_on_sigint(false)
+using DataStructures
+using Glob
 
 
-    # load the instance from the file sent from the bash script.
+# this setting makes it possible to send an InterruptException from a bash script.
 
-    filename = ARGS[1]
-
-    inst = readinstance(filename)
-
-    inst.dims = (8, 8)
-
-    # benchmark parameters.
-
-    algorithm = "ConstraintGA"
-
-    timeout = 600 # seconds
-
-    params = Params(32, 4, 0.95, 0.01, 32)
+Base.exit_on_sigint(false)
 
 
-    # run the benchmark.
+# load the instance from the file sent from the bash script.
 
-    try
-        print("benchmarking $algorithm on $(inst.name): ")
+filename = ARGS[1]
 
-        result = @timed evolve(inst, params; maxgens=1024)
+inst = readinstance(filename)
 
-        if !isnothing(result.value)
-            solution, chrom = result.value
-            kappa  = sum([ nconstraints(g) for g in chrom ])
-        else
-            solution = nothing
-        end
+inst.dims = (8, 8)
 
-        bm = Benchmark(
-            algorithm,
-            inst.name, 
-            inst.dims,
-            length(inst.robots),                                                # nrobots
-            solution,                                                           # solution
-            result.time,                                                        # time
-            nothing,                                                            # ϵ
-            isnothing(solution) ? nothing : makespan(solution, :solution),      # makespan
-            isnothing(solution) ? nothing : totaldist(solution, :solution),     # totalmoves
-            kappa,                                                              # max degree of coupling
-            nothing                                                             # avg degree of coupling
-        )
+# benchmark parameters.
 
-        writebenchmark(bm, "benchmarks/results")
+algorithm = "ConstraintGA2"
 
-        println("completed in $(bm.time) seconds with a makespan of $(bm.makespan) and $(bm.totalmoves) total moves.")
-    catch e
-        bm = Benchmark(
-            algorithm,
-            inst.name, 
-            inst.dims,
-            length(inst.robots), # nrobots
-            nothing,             # solution
-            timeout,             # time
-            nothing,             # ϵ
-            nothing,             # makespan
-            nothing,             # totalmoves
-            nothing,             # max degree of coupling
-            nothing              # mean degree of coupling
-        )
+timeout = 600 # seconds
 
-        writebenchmark(bm, "benchmarks/results")
+params = Params(32, 2, 0.95, 0.01)
 
-        println(e)
+
+# run the benchmark.
+
+try
+    print("benchmarking $algorithm on $(inst.name): ")
+
+    result = @timed evolve(inst, params; maxgens=1024)
+
+    if !isnothing(result.value)
+        solution, chrom, stats = result.value
+        kappa  = sum([ nconstraints(g) for g in chrom ])
+    else
+        solution = nothing
     end
-# end
+
+    bm = Benchmark(
+        algorithm,
+        inst.name, 
+        inst.dims,
+        length(inst.robots),                                                # nrobots
+        solution,                                                           # solution
+        result.time,                                                        # time
+        nothing,                                                            # ϵ
+        isnothing(solution) ? nothing : makespan(solution, :solution),      # makespan
+        isnothing(solution) ? nothing : totaldist(solution, :solution),     # totalmoves
+        kappa,                                                              # max degree of coupling
+        nothing,                                                            # avg degree of coupling
+        stats                                                               # ga stats
+    )
+
+    writebenchmark(bm, "benchmarks/results")
+
+    println("completed in $(bm.time) seconds with a makespan of $(bm.makespan) and $(bm.totalmoves) total moves.")
+catch e
+    bm = Benchmark(
+        algorithm,
+        inst.name, 
+        inst.dims,
+        length(inst.robots), # nrobots
+        nothing,             # solution
+        timeout,             # time
+        nothing,             # ϵ
+        nothing,             # makespan
+        nothing,             # totalmoves
+        nothing,             # max degree of coupling
+        nothing,             # mean degree of coupling
+        nothing              # ga stats
+    )
+
+    writebenchmark(bm, "benchmarks/results")
+
+    println(e)
+end
