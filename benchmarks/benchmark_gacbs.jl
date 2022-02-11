@@ -1,7 +1,13 @@
 # activate the MotionPlanning package. Assumes we are in the root directory of the project.
 
-using Pkg
-Pkg.activate(".")
+using Distributed
+
+@everywhere begin
+	using Pkg
+	Pkg.activate(".")
+end
+
+@everywhere using MotionPlanning.GeneticAlgorithms.ConstraintGA2
 
 using MotionPlanning.Model
 using MotionPlanning.Benchmarks
@@ -10,7 +16,6 @@ using MotionPlanning.MultiRobotPlanning.Objectives
 using MotionPlanning.MultiRobotPlanning.Heuristics
 using MotionPlanning.MultiRobotPlanning.Metrics
 using MotionPlanning.MultiRobotPlanning.CBS
-using MotionPlanning.GeneticAlgorithms.ConstraintGA2
 
 using DataStructures
 using Glob
@@ -32,10 +37,10 @@ inst.dims = (8, 8)
 
 # load the solution found by the ConstraintGA.
 
-preprocessed = begin
-    garesult = readbenchmark("benchmarks/results/$(inst.name)_ConstraintGA")
-    solutiontoplan(garesult.solution)
-end
+#preprocessed = begin
+#    garesult = readbenchmark("benchmarks/results/$(inst.name)_ConstraintGA")
+#    solutiontoplan(garesult.solution)
+#end
 
 
 # benchmark parameters.
@@ -60,7 +65,7 @@ cbs(dead_inst)
 try
     print("benchmarking $algorithm on $(inst.name): ")
 
-    # preprocessed = evolve(inst, Params(16, 2, 0.95, 0.05, 100); maxgens=256)[1]
+    preprocessed = solutiontoplan(evolve(inst, Params(32, 2, 0.95, 0.05, 100); maxgens=256)[1])
 
     result = @timed cbs(inst, preprocessed)
 

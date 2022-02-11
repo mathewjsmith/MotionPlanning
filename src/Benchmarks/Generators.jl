@@ -125,9 +125,9 @@ function generate()
     #     end
     # end
 
-    i = 820
-    dims = (16, 16)
-    ns   = 17:31
+    i = 1120
+    dims = (8, 8)
+    ns   = 17:19
 
     for n in ns
         for spread in spreads

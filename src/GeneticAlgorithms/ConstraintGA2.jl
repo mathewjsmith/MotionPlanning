@@ -126,50 +126,50 @@ function evolve(inst::MRMPInstance, params::Params; maxgens=Inf)
             end
 
             # solve instances and find fitnesses for newly discovered chromosomes
-            results = @distributed (vcat) for chrom in population
+            # results = @distributed (vcat) for chrom in population
             # results = pmap(chrom -> begin
-                h = hash(chrom)
-
-                (sol, newpaths) = solve(paths, chrom, inst)
-
-                fit = f(chrom, sol, inst)
-
-                ncolls = isnothing(sol) ? Inf : length(findcollisions(sol, inst))
-
-                (h, sol, fit, newpaths, ncolls)
-            end
+#                h = hash(chrom)
+#
+#                (sol, newpaths) = solve(paths, chrom, inst)
+#
+#                fit = f(chrom, sol, inst)
+#
+#                ncolls = isnothing(sol) ? Inf : length(findcollisions(sol, inst))
+#
+#                (h, sol, fit, newpaths, ncolls)
+#            end
             # end, population)
 
-            for (h, _, fit, newpaths, ncolls) in results
-                if !haskey(fitness, h)
-                    fitness[h] = fit
-                end 
-
-                for (gh, path) in newpaths
-                    paths[gh] = path
-                end
-
-                if ncolls < mincolls
-                    mincolls   = ncolls
-                    lastimprov = 1
-                end
-            end
+#            for (h, _, fit, newpaths, ncolls) in results
+#                if !haskey(fitness, h)
+#                    fitness[h] = fit
+#                end 
+#
+#                for (gh, path) in newpaths
+#                    paths[gh] = path
+#                end
+#
+#                if ncolls < mincolls
+#                    mincolls   = ncolls
+#                    lastimprov = 1
+#                end
+#            end
                 
-            # for chrom in population
-            #     h = hash(chrom)
+             for chrom in population
+                 h = hash(chrom)
 
-            #     if !haskey(fitness, h)
-            #         sol        = solve!(paths, chrom, inst)
-            #         fitness[h] = f(chrom, sol, inst)
+                 if !haskey(fitness, h)
+                     sol        = solve!(paths, chrom, inst)
+                     fitness[h] = f(chrom, sol, inst)
 
-            #         ncolls   = isnothing(sol) ? Inf : length(findcollisions(sol, inst))
+                     ncolls   = isnothing(sol) ? Inf : length(findcollisions(sol, inst))
 
-            #         if ncolls < mincolls
-            #             mincolls = ncolls
-            #             lastimprov = 1
-            #         end
-            #     end
-            # end
+                     if ncolls < mincolls
+                         mincolls = ncolls
+                         lastimprov = 1
+                     end
+                 end
+             end
 
             # for (h, sol, fit, ncolls) in results
             #     if sol != :seen
