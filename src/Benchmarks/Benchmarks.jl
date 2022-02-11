@@ -4,6 +4,7 @@ include("Generators.jl")
 
 using MotionPlanning.Model
 using MotionPlanning.MultiRobotPlanning.Graph
+using MotionPlanning.GeneticAlgorithms.ConstraintGA2
 
 using JSON2
 
@@ -26,6 +27,7 @@ struct Benchmark
     totalmoves   :: Union{Int64, Nothing}
     maxkappa     :: Union{Int64, Nothing}
     avgkappa     :: Union{Float64, Nothing}
+    gastats      :: Union{Vector{GAStats}, Nothing}
 end
 
 

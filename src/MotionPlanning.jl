@@ -7,7 +7,7 @@ include("Constraints/Contraints.jl")
 include("Collisions/Collisions.jl")
 include("SingleRobotPlanning/SingleRobotPlanning.jl")
 include("MultiRobotPlanning/MultiRobotPlanning.jl")
-include("Benchmarks/Benchmarks.jl")
 include("GeneticAlgorithms/GeneticAlgorithms.jl")
+include("Benchmarks/Benchmarks.jl")
 
 end

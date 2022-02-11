@@ -18,7 +18,8 @@ using Statistics
 export
     evolve,
     Params,
-    nconstraints
+    nconstraints,
+    GAStats
 
 
 struct Params
@@ -26,7 +27,6 @@ struct Params
     nelites  :: Int
     pcross   :: Float64
     pmut     :: Float64
-    kmax     :: Int
 end
 
 
@@ -92,7 +92,6 @@ function evolve(inst::MRMPInstance, params::Params; maxgens=Inf, kinit=nothing)
     end
 
     consts = collect(Iterators.flatten(map(conflicttoconstraints, collect(colls))))
-    println(length(consts))
 
     population = let 
         k = isnothing(kinit) ? max(2, ceil(Int, log(ncolls))) : kinit
@@ -240,7 +239,7 @@ function f(chrom::Chromosome, sol::Union{Solution, Nothing}, inst::MRMPInstance)
         colls     = length(findcollisions(sol, inst))
 
         if colls == 0
-            1.0
+            [ 1.0 ]
         else
             n         = size(chrom)[1]
             maxdist   = makespan(sol, :solution)

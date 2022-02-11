@@ -419,13 +419,14 @@ logit(p) = log(p / (1 - p))
 relent(c, n, mk, w, h) = let
 	p = c / (n * mk)
 	q = min(0.99, 12 * (n - 1) / 5 * h * w)
+	q = 0.76
 	p * log2(p / q) + (1 - p) * log2((1 - p) / (1 - q))
 end
 
 # ╔═╡ d69052ae-94f8-4d0e-9aa8-04aa5256ddc4
 let
 	gr()
-	f(c, k, n, mk, w, h) = relent(c, n, mk, w, h) * sig((1024 - k) / 1024)
+	f(c, k, n, mk, w, h) = relent(c, n, mk, w, h) * (1 - sig(k / 1024))
 
 	surface(1:32, 1:1024, (x, y) -> f(x, y, 8, 8, 4, 4),
 		c = cgrad(:matter, rev=true),
@@ -443,14 +444,15 @@ end
 # ╔═╡ e03046fa-4125-4609-b60e-7765b0e86068
 fitplot = let
 	gr()
-	f(c, k, n, mk, w, h) = relent(c, n, mk, w, h) * sig((n - k) / k)
+	f(c, k, n, mk, w, h) = relent(c, n, mk, w, h) * (1 - sig(k / n))
 
-	surface(0:50, 0:8, (x, y) -> f(x, y, 8, 16, 8, 8),
+	surface(1:60, 0:8, (x, y) -> f(x, y, 8, 16, 8, 8),
 		c = cgrad(:matter, rev=true),
 		legend = false,
 		surfacealpha = 0.5,
-		xticks = 0:5:50,
+		xticks = 0:10:80,
 		yticks = 1:8,
+		zlims = (0, 1),
 		xlabel = "Collisions",
 		ylabel = "Coupling",
 		zlabel = "Fitness",
@@ -460,6 +462,9 @@ end
 
 # ╔═╡ 5dc784b7-29a4-46d3-8d46-64170211a4b2
 savefig(fitplot, "fitplot.pdf")
+
+# ╔═╡ 2d1b6513-08af-45ee-92f4-a1dda0d5eca0
+relent(0, 4, 0, 4, 4)
 
 # ╔═╡ d4832b15-bc9a-4836-a776-a6e1ac05dbcb
 map(x -> relent(x, 8, 16, 8, 8), 0:10)
@@ -522,6 +527,7 @@ end
 # ╠═1be3d6ef-0d99-49a2-b6c6-3888333dd8be
 # ╠═d69052ae-94f8-4d0e-9aa8-04aa5256ddc4
 # ╠═e03046fa-4125-4609-b60e-7765b0e86068
+# ╠═2d1b6513-08af-45ee-92f4-a1dda0d5eca0
 # ╠═d4832b15-bc9a-4836-a776-a6e1ac05dbcb
 # ╠═5dc784b7-29a4-46d3-8d46-64170211a4b2
 # ╠═ee185aac-c73f-4d6a-b7d4-f0f3e1703abc
