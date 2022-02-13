@@ -35,7 +35,7 @@ inst.dims = (8, 8)
 
 # benchmark parameters.
 
-algorithm = "ConstraintGA2"
+algorithm = "ConstraintGA3"
 
 timeout = 600 # seconds
 

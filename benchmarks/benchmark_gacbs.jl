@@ -37,15 +37,20 @@ inst.dims = (8, 8)
 
 # load the solution found by the ConstraintGA.
 
-#preprocessed = begin
-#    garesult = readbenchmark("benchmarks/results/$(inst.name)_ConstraintGA")
-#    solutiontoplan(garesult.solution)
-#end
+preprocessed = begin
+    garesult = readbenchmark("benchmarks/results/$(inst.name)_ConstraintGA3")
+
+    if isnothing(garesult.solution)
+        nothing
+    else
+        solutiontoplan(garesult.solution)
+    end
+end
 
 
 # benchmark parameters.
 
-algorithm = "GA-CBS"
+algorithm = "GA-CBS3"
 
 timeout = 600 # seconds
 
@@ -65,15 +70,15 @@ cbs(dead_inst)
 try
     print("benchmarking $algorithm on $(inst.name): ")
 
-    preprocessed = solutiontoplan(evolve(inst, Params(32, 2, 0.95, 0.05, 100); maxgens=256)[1])
-
     result = @timed cbs(inst, preprocessed)
 
-    solution = result.value[1]
-
-    constraints = result.value[2]
-
-    min, max, mean = κ(solution, constraints, inst)
+    if isnothing(result.value)
+        solution, min, max, mean = nothing, nothing, nothing, nothing
+    else
+        solution = result.value[1]
+        constraints = result.value[2]
+        min, max, mean = κ(solution, constraints, inst)
+    end
 
     bm = Benchmark(
         algorithm,
@@ -86,7 +91,8 @@ try
         isnothing(result.value) ? nothing : makespan(solution, :solution),  # makespan
         isnothing(result.value) ? nothing : totaldist(solution, :solution), # totalmoves
         max,                                                                # max degree of coupling
-        mean                                                                # avg degree of coupling
+        mean,                                                               # avg degree of coupling
+        nothing
     )
 
     writebenchmark(bm, "benchmarks/results")
@@ -105,7 +111,8 @@ catch e
         nothing,             # makespan
         nothing,             # totalmoves
         nothing,             # max degree of coupling
-        nothing              # mean degree of coupling
+        nothing,             # mean degree of coupling
+        nothing
     )
 
     writebenchmark(bm, "benchmarks/results")

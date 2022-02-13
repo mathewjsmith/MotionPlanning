@@ -82,7 +82,7 @@ function evolve(inst::MRMPInstance, params::Params; maxgens=Inf, kinit=nothing)
     ncolls = length(colls)
 
     if ncolls == 0
-        return initsol
+        return (initsol, initchrom, GAStats[])
     end
 
     fitness[hash(initchrom)] = f(initchrom, initsol, inst)
@@ -234,20 +234,19 @@ end
 
 function f(chrom::Chromosome, sol::Union{Solution, Nothing}, inst::MRMPInstance)
     if isnothing(sol)
-        [ 0.0, 0.0, 0.0 ]
+        [ 0.0 ]
     else
-        colls     = length(findcollisions(sol, inst))
+        n       = size(chrom)[1]
+        colls   = length(findcollisions(sol, inst))
+        maxdist = makespan(sol, :solution)
+        k       = sum([ nconstraints(g) for g in chrom ])
 
-        if colls == 0
-            [ 1.0 ]
-        else
-            n         = size(chrom)[1]
-            maxdist   = makespan(sol, :solution)
-            # sumdist    = totaldist(sol, :solution)
-            tau       = sum([ nconstraints(g) for g in chrom ])
+        divergence = colls == 0 ? log2(5) : relent(colls, n, maxdist, 0.8)
+            
 
-            [ relent(colls, n, maxdist, 0.76) ]#* (1 - sig(tau / prod(size(chrom)))) ]
-        end
+        kpenalty = sig((prod(size(chrom)) - k) / prod(size(chrom)))
+
+        [ divergence ] #* kpenalty ]
     end
 end
 

@@ -1,0 +1,1 @@
+{"algorithm":"GA-CBS3","instancename":"rand_276_n005_d8x8_c100","dims":[8,8],"nrobots":5,"solution":[[[3,0],[3,1],[2,1],[2,2],[3,2]],[[3,0],[4,1],[3,1],[1,2],[2,2]],[[3,0],[5,1],[3,1],[0,2],[1,2]],[[3,0],[5,1],[3,1],[0,1],[1,1]]],"time":0.019412938,"ϵ":null,"makespan":4,"totalmoves":9,"maxkappa":0,"avgkappa":0.0,"gastats":null}
