@@ -29,24 +29,24 @@ struct Params
 end
 
 
-# function iterevolve(inst::MRMPInstance, params::Params, initialsol::Union{Solution, Nothing}=nothing, collthresh::Int=0)
-#     try
-#         sol = evolve(inst::MRMPInstance, params, initialsol)    
+function iterevolve(inst::MRMPInstance, params::Params, initialsol::Union{Solution, Nothing}=nothing, collthresh::Int=0)
+    try
+        sol = evolve(inst::MRMPInstance, params, initialsol)    
 
-#         ncolls = length(findcollisions(sol, inst))
+        ncolls = length(findcollisions(sol, inst))
 
-#         if ncolls <= collthresh
-#             return sol
-#         end
+        if ncolls <= collthresh
+            return sol
+        end
 
-#         iterevolve(inst, params, sol, collthresh)
-#     catch _
-#         initialsol
-#     end
-# end
+        iterevolve(inst, params, sol, collthresh)
+    catch _
+        initialsol
+    end
+end
 
 
-function evolve(inst::MRMPInstance, params::Params, initialsol::Union{Solution, Nothing}=nothing; kinit=1)
+function evolve(inst::MRMPInstance, params::Params, initialsol::Union{Solution, Nothing}=nothing; kinit=1, maxgens=1024)
     chromsize = length(inst.robots)
 
     solutions      = Dict{UInt64, Union{Solution, Nothing}}()
@@ -68,10 +68,11 @@ function evolve(inst::MRMPInstance, params::Params, initialsol::Union{Solution, 
     generation = 1
     best       = ncolls
     lastimprov = 1
+    diversity  = length(unique(population)) / length(population)
 
-    # try
-        while best > 0 # kappa <= params.kmax && generation < 1025
-            println("generation: $generation, kappa: $kappa, lambda: $lambda, best: $best")
+    try
+        while best > 0 && generation < maxgens && kappa <= params.kmax
+            println("generation: $generation, kappa: $kappa, lambda: $lambda, diversity: $diversity, best: $best")
 
             # generate the next generation
             if generation > 1
@@ -120,37 +121,49 @@ function evolve(inst::MRMPInstance, params::Params, initialsol::Union{Solution, 
                 lastimprov += 1
             end
 
-            kappa  = maximum(κ(chrom) for chrom in population)
-            lambda = maximum(λ(chrom) for chrom in population)
+            kappa     = maximum(κ(chrom) for chrom in population)
+            lambda    = maximum(λ(chrom) for chrom in population)
+            diversity = length(unique(population)) / length(population)
 
             generation += 1
         end
-    # catch _
-    #     println("interrupted")
+    catch _
+        println("interrupted")
 
-    #     best = first(sort(population, by=chrom -> fitness[chrom], rev=true))
+        best = first(sort(population, by=chrom -> fitness[hash(chrom)], rev=true))
 
-    #     solution[best]
-    # end
+        solution[hash(best)]
+    end
 
-    best = first(sort(population, by=chrom -> fitness[chrom], rev=true))
+    best = first(sort(population, by=chrom -> fitness[hash(chrom)], rev=true))
 
     solutions[hash(best)]
 end
 
 
+sig(x) = 1 / (1 + exp(-x))
+
+
+relent(c, n, maxdist, q) = let
+	p = c / (n * maxdist)
+	p * log2(p / q) + (1 - p) * log2((1 - p) / (1 - q))
+end
+
+
 function f(chrom::Chromosome, sol::Union{Solution, Nothing}, inst::MRMPInstance)
     if isnothing(sol)
-        [0.0, 0.0, 0.0, 0.0]
+        [0.0]
     else
-        ncolls = length(findcollisions(sol, inst))
-        sum    = totaldist(sol, :solution)
-        max    = makespan(sol, :solution)
+        n       = size(chrom)[1]
+        colls   = length(findcollisions(sol, inst))
+        maxdist = makespan(sol, :solution)
         kappa  = κ(chrom)
 
-        sig(x) = exp(-x) / (1 + exp(-x))
+        divergence = colls == 0 ? log2(5) : relent(colls, n, maxdist, 0.8)
 
-        [ sig(ncolls), sig(kappa), sig(sum), sig(max) ]
+        kpenalty = sig((nv(chrom) - kappa) / nv(chrom))
+
+        [ divergence  * kpenalty ]
     end
 end
 
@@ -176,22 +189,34 @@ function select(population::Vector{Chromosome}, fitnesses::Vector{Vector{Float64
 
     # sample(population, Weights(weights), n)
 
-    ranking = sort(1 : n, by=i -> fitnesses[i])
-    rank(i) = findfirst(r -> r == i, ranking)
+    fitnesses = map(first, fitnesses)
+    
+    totalfitness = sum(fitnesses)
 
-    amax = 1.2
-    amin = 0.8
+    pointerdist = totalfitness / m
 
-    p(i) = (1 / n) * (amin + (amax - amin) * ((rank(i) - 1) / (n - 1)))
+    start = rand() * pointerdist
 
-    weights = map(i -> p(i), 1 : n)
+    pointers = [ start + i * pointerdist for i in 1 : m -1 ]
 
-    boltzs = map(w -> exp(w / (gen / lastimprov)), weights)
-    boltzm = sum(boltzs) / length(boltzs)
+    roulettewheelselection(population, fitnesses, pointers)
+end
 
-    weights = map(b -> b / boltzm, boltzs)
 
-    sample(population, Weights(weights), m, replace=false)
+function roulettewheelselection(population, fitnesses, pointers)
+    selected = Chromosome[]
+
+    for p in pointers
+        i = 0
+
+        while sum(fitnesses[1 : i]) < p
+            i += 1
+        end
+
+        push!(selected, population[i])
+    end
+
+    selected
 end
 
 
@@ -211,6 +236,13 @@ function reproduce(selection::Vector{Chromosome}, params::Params)
             offspring = crossover(parents..., params.pcross)
 
             foreach(child -> mutate!(child, params.pmut), offspring)
+
+            foreach(child -> 
+                while κ(child) > params.kmax
+                    edge = sample(collect(edges(child)))
+                    rem_edge!(child, edge)
+                end, offspring
+            )
 
             offspring
         end
