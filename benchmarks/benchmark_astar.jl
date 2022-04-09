@@ -40,14 +40,14 @@ robots = [
 
 deadinst = MRMPInstance("test", robots, Vector{Obstacle}())
 
-plan(deadinst)
+astar_mr(deadinst)
 
 # run the benchmark.
 
 try
     print("benchmarking $algorithm on $(inst.name): ")
 
-    result = @timed plan(inst)
+    result = @timed astar_mr(inst)
 
     if !isnothing(result.value)
         solution = result.value

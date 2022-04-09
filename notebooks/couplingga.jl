@@ -21,7 +21,7 @@ begin
 	using MotionPlanning.MultiRobotPlanning.Metrics
 	using MotionPlanning.MultiRobotPlanning.CBS
 	using MotionPlanning.MultiRobotPlanning.MStar
-	using MotionPlanning.MultiRobotPlanning.Shadoks
+	using MotionPlanning.MultiRobotPlanning.PriorityPlanning
 	using MotionPlanning.SingleRobotPlanning
 end
 
@@ -56,7 +56,7 @@ makespan(itersol, :solution)
 length(findcollisions(itersol, inst))
 
 # ╔═╡ 8f7c3311-b881-4fc6-aa0d-62cf80fb3de3
-shadsol = shadoks(inst)
+shadsol = priorityplanning(inst)
 
 # ╔═╡ 93b20215-640c-43ef-a4f0-e4dd715124a4
 makespan(shadsol, :solution)

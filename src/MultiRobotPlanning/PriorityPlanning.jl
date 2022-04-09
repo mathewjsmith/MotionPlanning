@@ -1,7 +1,7 @@
-module Shadoks
+module PriorityPlanning
 
 export
-    shadoks
+    priorityplanning
 
 using MotionPlanning.Collisions
 using MotionPlanning.Model
@@ -13,7 +13,14 @@ using InvertedIndices
 using DataStructures
 
 
-function shadoks(instance::MRMPInstance)
+"""
+    priorityplanning(instance)
+
+Attempt to find a valid, but not necessary optimal solution, for the given `instance`. May fail to find a solution, in which case `nothing` is returned.
+
+Priority planning is a decoupled algorithm for MRMP. Robots are ordered according to some heuristic, then each robot in planned for one at a time, taking its shortest path while respecting the paths of those planned for before it. Here a heuristic which prioritises finding *a* solution rather than an optimal one is used. Similar to that used by Crombzez et al. (2021) and Lieu et al. (2021) in the 2021 SoCG challenge, a minimum cost matching is computed between the robots and positions in a "storage network" outside the bounding box of the instance. Robots are then ordered according to *depth*: the distance between a robot's position in the storage network and the closest position in the bounding box.
+"""
+function priorityplanning(instance::MRMPInstance)
     inst = deepcopy(instance)
 
     n = length(instance.robots)
@@ -113,6 +120,11 @@ function shadoks(instance::MRMPInstance)
 end
 
 
+"""
+    isoutside(pos, box)
+
+Determine if `pos` is outside the bounding `box`.
+"""
 function isoutside(pos, box)
     x, y = pos
     xmin, ymin = box[1]
@@ -121,9 +133,19 @@ function isoutside(pos, box)
 end
 
 
+"""
+    boundingbox(dims, mindepth)
+
+Compute the bounding box, determine by the `dims` of the instance and plus a padding specified by `mindepth`.
+"""
 boundingbox(dims, mindepth) = ((-mindepth, -mindepth), dims .+ (mindepth -1))
 
 
+"""
+    depth(pos, box, instance)
+
+Compute the shortest distance between `pos` and a position in the bounding `box`.
+"""
 function depth(pos::Pos, box::Tuple{Pos, Pos}, instance::MRMPInstance)
     cost  = Dict{Tuple{Int, Int}, Int}()
     cost[pos] = 0
@@ -151,6 +173,11 @@ function depth(pos::Pos, box::Tuple{Pos, Pos}, instance::MRMPInstance)
 end
 
 
+"""
+    storagenetwork(instance, mindepth=3)
+
+Create a storage network for the given `instance`: A set of positions organised into columns radiating out of the bounding box in all directions, with one cell seperating each column. `mindepth` specifies the minimum distance between a position in the storage network and a position in the bounding box.
+"""
 function storagenetwork(instance, mindepth=3)
 	w, h = instance.dims
 	box = boundingbox(instance.dims, mindepth)
@@ -182,6 +209,11 @@ function storagenetwork(instance, mindepth=3)
 end
 
 
+"""
+    match(robots, network)
+
+Compute a min-cost matching between robot starting positions and positions in the storage network.
+"""
 function match(robots::Vector{Robot}, network::Vector{Pos})
     costmatrix = [ manhattandist(r.pos, mid) + manhattandist(r.target, mid) for mid in network, r in robots ]
     assignment, _ = hungarian(costmatrix')
@@ -189,6 +221,11 @@ function match(robots::Vector{Robot}, network::Vector{Pos})
 end
 
 
+"""
+    addobstacles!(i, path, instance)
+
+Add dynamic obstacles to the `instance` according to the given `path` for robot `i`.
+"""
 function addobstacles!(i::Int, path::Vector{Pos}, instance::MRMPInstance)
 	pathlength = length(path)
 	obstlength = length(instance.obstacles)
@@ -211,6 +248,11 @@ function addobstacles!(i::Int, path::Vector{Pos}, instance::MRMPInstance)
 end
 
 
+"""
+    plantosolution(plan)
+
+Convert the given `plan` (list of robot paths) into solution form (sequence of configurations).
+"""
 function plantosolution(plan::Plan)
     cost = makespan(plan, :plan)
     paths = map(path -> pad(path, cost), plan)
@@ -224,6 +266,11 @@ function plantosolution(plan::Plan)
 end
 
 
+"""
+    pad(path, makespan)
+
+Append repitions of the target position onto `path` such that it's length is equal to `makespan`.
+"""
 function pad(path::Path, makespan::Int)
     if length(path) < makespan
         [ path; repeat([path[end]], makespan - length(path)) ]

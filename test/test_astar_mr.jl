@@ -18,7 +18,7 @@ using MotionPlanning.MultiRobotPlanning.AStar
 
         instance = MRMPInstance("test", robots, Vector{Obstacle}())
 
-        solution = plan(instance)
+        solution = astar_mr(instance)
 
         println(solution)
 
@@ -33,7 +33,7 @@ using MotionPlanning.MultiRobotPlanning.AStar
 
         instance = MRMPInstance("test", robots, Vector{Obstacle}())
 
-        solution = plan(instance)
+        solution = astar_mr(instance)
 
         @test !hascollisions(solution, instance)
     end
@@ -48,7 +48,7 @@ using MotionPlanning.MultiRobotPlanning.AStar
 
         instance = MRMPInstance("test", robots, obstacles)
 
-        solution = plan(instance)
+        solution = astar_mr(instance)
 
         @test !hascollisions(solution, instance)
     end
@@ -63,7 +63,7 @@ using MotionPlanning.MultiRobotPlanning.AStar
 
         instance = MRMPInstance("test", robots, obstacles)
 
-        solution = plan(instance)
+        solution = astar_mr(instance)
 
         @test !hascollisions(solution, instance)
     end
@@ -81,7 +81,7 @@ using MotionPlanning.MultiRobotPlanning.AStar
 
         instance = MRMPInstance("test,", robots, obstacles)
 
-        solution = plan(instance)
+        solution = astar_mr(instance)
 
         @test length(solution) == 5
     end

@@ -15,16 +15,16 @@ using DataStructures
 
 
 """
-An exact algorithm for coordinated motion planning. M* is a variant of A* search on the configuration space using subdimensional-expansion.
+    astar_mr(instance)
+
+Perform A* search on the configuration-space of the given `instance` to find a shortest path from the start to target configs.
 """
-function plan(instance::MRMPInstance)
+function astar_mr(instance::MRMPInstance)
     start  = Config([ r.pos for r in instance.robots ])
     target = Config([ r.target for r in instance.robots ])
     
     parent = Dict{Config, Union{Config, Nothing}}()
     parent[start] = nothing
-
-    shortestpaths = [ astar(r.pos, r.target, instance) for r in instance.robots ]
 
     h(v::Config) = maximum([ manhattandist(pos, dst) for (pos, dst) in zip(v, target)])
 
@@ -46,7 +46,6 @@ function plan(instance::MRMPInstance)
 
             newcost = cost[v] + 1
 
-            # If there are no collisions from v to w, and v provides the cheapest route to w encountered so far, set v to be the parent of w and add w to the queue.
             if collisionfree && (!haskey(cost, w) || (newcost < cost[w]))
                 cost[w]   = newcost
                 queue[w]  = newcost + h(w)
@@ -59,6 +58,11 @@ function plan(instance::MRMPInstance)
 end
 
 
+"""
+    outneighbours(v, targets, instance)
+
+Find the configs adjacent to `v`.
+"""
 function outneighbours(v::Config, targets::Config, instance::MRMPInstance)
     moves = [ nextmoves(pos, target, instance) for (pos, target) in zip(v, targets) ]
     map(collect, collect(Iterators.product(moves...)))
@@ -67,7 +71,9 @@ end
 
 
 """
-After reaching the goal config, reconstructs the optimal path by working back through the parents in graph.
+    buildpath(v, parents)
+
+Upon finding the target config, reconstruct the shortest path by backtracking through parents until the start config is found.
 """
 function buildpath(v::Config, parents::Dict{Config, Union{Config, Nothing}})
     parent = parents[v]

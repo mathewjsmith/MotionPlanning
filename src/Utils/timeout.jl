@@ -1,3 +1,11 @@
+"""
+    timeout(seconds, expr)
+
+If `expr` does not complete with the specified timeframe `seconds`, send an interrupt exception.
+
+# Examples
+    @timeout 600 expensive_algorithm(input)
+"""
 macro timeout(seconds, expr)
     quote
         tsk = @task $expr

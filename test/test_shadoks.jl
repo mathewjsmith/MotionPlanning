@@ -3,10 +3,10 @@ using DataStructures
 
 using MotionPlanning.Collisions
 using MotionPlanning.Model
-using MotionPlanning.MultiRobotPlanning.Shadoks
+using MotionPlanning.MultiRobotPlanning.PriorityPlanning
 
 
-@testset "Shadoks" begin
+@testset "PriorityPlanning" begin
     @testset "2x2 no collisions" begin
         robots = [
             Robot(1, (0, 0), (0, 1)),
@@ -15,7 +15,7 @@ using MotionPlanning.MultiRobotPlanning.Shadoks
 
         instance = MRMPInstance("test", robots, Vector{Obstacle}())
 
-        solution = shadoks(instance)
+        solution = priorityplanning(instance)
 
 		@test !hascollisions(solution, instance; ignoreobstacles=true)
     end
@@ -28,7 +28,7 @@ using MotionPlanning.MultiRobotPlanning.Shadoks
 
         instance = MRMPInstance("test", robots, Vector{Obstacle}())
 
-        solution = shadoks(instance)
+        solution = priorityplanning(instance)
         
 		@test !hascollisions(solution, instance; ignoreobstacles=true)
     end
@@ -47,7 +47,7 @@ using MotionPlanning.MultiRobotPlanning.Shadoks
         instance = MRMPInstance("test", robots, obstacles)
         instance.bounded = false
 
-        solution = shadoks(instance)
+        solution = priorityplanning(instance)
 
         @test !hascollisions(solution, instance; ignoreobstacles=true)
     end

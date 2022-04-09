@@ -1,7 +1,6 @@
 module Model
 
 using OffsetArrays
-using JSON2
 
 export
     Pos,
@@ -19,39 +18,68 @@ export
     isdynamic,
     Cell,
     MRMPInstance,
-    iscomplete,
-    readinstance,
-    readinstances,
-    random,
-    instance_to_json,
-    writeinstance,
-    writesolution,
-    readsolution,
-    Benchmark,
-    writebenchmark,
-    readbenchmark
+    iscomplete
 
 
+"""
+A point `(x, y)` in discrete 2D space.
+"""
 const Pos = Tuple{Int64, Int64}
 
 
+"""
+A state of an MRMP system. Index `i` of a config is the position of robot `i` in that config.
+"""
 const Config = Vector{Pos}
 
 
+"""
+A solution to an MRMP instance in the form of a sequence of configs.
+"""
 const Solution = Vector{Config}
 
 
+"""
+A path for a robot in the form of a sequence of positions.
+"""
 const Path = Vector{Pos}
 
 
+"""
+A solution to an MRMP instance in the form of a list consisting of a path for each robot.
+"""
 const Plan = Vector{Path}
 
+
+"""
+    makespan(plan)
+
+Compute the makespan of a solution to an MRMP instance given as a `plan`.
+"""
 makespan(plan::Plan) = maximum(length(path) for path in plan)
 
+
+"""
+    getconfig(time, plan)
+
+Get the config of a solution to an MRMP instance at a specified `time` when the solution is given as a `plan`.
+"""
 getconfig(time::Int, plan::Plan) = [ path[min(end, time)] for path in plan ]
 
+
+"""
+    plantosolution(plan)
+
+Convert the given `plan::Plan` (list of robot paths) into a `Solution` (list of configs).
+"""
 plantosolution(plan::Plan) = [ getconfig(time, plan) for time in 1:makespan(plan) ]
 
+
+"""
+    solutiontoplan(sol)
+
+Convert the given `sol::Solution` (list of configs) into a `Plan` (list of robot paths).
+"""
 solutiontoplan(sol::Solution) = begin
 	n = length(sol[1])
 	l = length(sol)
@@ -60,6 +88,7 @@ solutiontoplan(sol::Solution) = begin
 	
 	for r in 1:n
 		path = []
+
 		for t in 1:l
 			push!(path, sol[t][r])
 		end
@@ -78,7 +107,7 @@ mutable struct Robot
 end
 
 
-const Obstacle = Tuple{Int64, Int64}
+const Obstacle = Pos
 
 
 const StaticObstacles = Vector{Obstacle}
@@ -90,12 +119,25 @@ const DynamicObstacles = Vector{StaticObstacles}
 const Obstacles = Union{StaticObstacles, DynamicObstacles}
 
 
+"""
+    isdynamic(obsts)
+
+Determine if the given set of obstacles `obsts` is dynamic.
+"""
 isdynamic(obsts::Obstacles) = isa(obsts, DynamicObstacles)
 
 
+"""
+Union of the possible states of each position in the grid of an MRMP instance.
+"""
 const Cell = Union{Nothing, Obstacle, Robot}
 
 
+"""
+    MRMPInstance(name, robots, obstacles[, dims, bounded])
+
+An instance of the multi-robot motion planning problem (MRMP). Characterised by a list of `robots`, each with a unique start and target position, and a set of `obstacles` which may be static or dynamic. `bounded` determines whether or not robots are allowed to move outside the specified `dims`.
+"""
 mutable struct MRMPInstance
     name      :: String
     robots    :: Vector{Robot}
@@ -111,6 +153,11 @@ function MRMPInstance(name::String, robots::Vector{Robot}, obstacles::Obstacles)
 end
 
 
+"""
+    dimensions(robots, obstacles)
+
+Derive the dimensions of an MRMP instance by finding the minimum and maximum positions across the start and target positions of the `robots`, plus the positions of `obstacles`.
+"""
 function dimensions(robots, obstacles)
     width = 0
     height = 0
@@ -147,6 +194,11 @@ Base.:(==)(a::Robot, b::Robot) = a.id == b.id
 Base.hash(r::Robot) = Base.hash(r.id)
 
 
+"""
+    iscomplete(robot)
+
+Determine if the `robot` has reached its target.
+"""
 iscomplete(robot::Robot) = robot.pos == robot.target
 
 

@@ -7,7 +7,7 @@ using MotionPlanning.Model
 using MotionPlanning.Benchmarks
 using MotionPlanning.IO
 using MotionPlanning.MultiRobotPlanning.Metrics
-using MotionPlanning.MultiRobotPlanning.Shadoks
+using MotionPlanning.MultiRobotPlanning.PriorityPlanning
 
 using DataStructures
 using Glob
@@ -28,7 +28,7 @@ inst.dims = (8, 8)
 
 # benchmark parameters.
 
-algorithm = "Shadoks"
+algorithm = "PriorityPlanning"
 
 timeout = 600 # seconds
 
@@ -42,14 +42,14 @@ robots = [
 
 deadinst = MRMPInstance("test", robots, Vector{Obstacle}())
 
-shadoks(deadinst)
+priorityplanning(deadinst)
 
 # run the benchmark.
 
 try
     print("benchmarking $algorithm on $(inst.name): ")
 
-    result = @timed shadoks(inst)
+    result = @timed priorityplanning(inst)
 
     solution = result.value
 

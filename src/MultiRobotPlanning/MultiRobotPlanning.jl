@@ -7,6 +7,6 @@ include("Metrics.jl")
 include("CBS.jl")
 include("MStar.jl")
 include("AStar.jl")
-include("Shadoks.jl")
+include("PriorityPlanning.jl")
 
 end

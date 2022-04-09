@@ -12,11 +12,16 @@ gettime(pos::TPos) = pos[1]
 getpos(pos::TPos)  = pos[2]
 
 
-function astar(robot::Robot, instance::MRMPInstance; heuristic::Union{Function, Nothing}=nothing)
-    astar(robot.pos, robot.target, instance; heuristic=heuristic)
-end
+"""
+    astar(start, target, instance, heuristic=nothing, constmat=nothing, r=nothing)
 
+Perform A* search to find a shortest path from `start` to `target` in the given MRMP instance.
 
+# Arguments
+- heuristic: function with signature `heuristic(src, dst, target, cost) -> Float`. Defaults to manhattan distance.
+- constmat: constraint matrix---a 4d boolean array such that if `constmat[r, x, y, t]` is true, robot `r` cannot move onto `(x, y)` at time `t`.
+- r: robot id, used to find relevant constraints when a constraint matrix is provided.
+"""
 function astar(
     start     :: Pos, 
     target    :: Pos, 
@@ -26,7 +31,6 @@ function astar(
     r         :: Int=0
 )
     parents = Dict{TPos, Union{TPos, Nothing}}()
-    # costs   = Dict{Pos, Int}()
     queue   = PriorityQueue{TPos, Float64}()
 
     maxlength = 4 * sum(instance.dims)
@@ -38,12 +42,10 @@ function astar(
     end
 
     queue[(1, start)]   = 0
-    # costs[start]      = 1
     parents[(1, start)] = nothing
 
     while !isempty(queue)
         (t, v) = dequeue!(queue)
-        # vcost = costs[v]
 
         if v == target
             return buildpath((t, v), parents)
@@ -64,25 +66,8 @@ function astar(
         end
 
         for w in adjacents
-            # if (
-                # h(v, w, target, tt) < Inf # && (
-                #     !haskey(costs, w) || 
-                #     tt < costs[w] || 
-                #     (w == v && tt <= maxlength) # && vcost <= costs[parents[v]])
-                # )
-            # )
-                # if w == v && v != adjacents[1] # only consider a `remain` move when it is the best available
-                #     continue
-                # end
-
-                # costs[w]   = tt
-                queue[(tt, w)] = tt + h(v, w, target, tt)
-                parents[(tt, w)] = (t, v)
-
-                # if w != v
-                #     parents[w] = v
-                # end
-            # end
+            queue[(tt, w)] = tt + h(v, w, target, tt)
+            parents[(tt, w)] = (t, v)
         end
     end
 
@@ -90,6 +75,27 @@ function astar(
 end
 
 
+function astar(robot::Robot, instance::MRMPInstance; heuristic::Union{Function, Nothing}=nothing)
+    astar(robot.pos, robot.target, instance; heuristic=heuristic)
+end
+
+
+function astar(
+    start       :: Pos, 
+    target      :: Pos, 
+    instance    :: MRMPInstance, 
+    constraints :: Vector{Constraint}
+)
+    h(src, dst, target, time) = createheuristic(src, dst, target, time, constraints)
+    astar(start, target, instance; heuristic=h)
+end
+
+
+"""
+    buildpath(v, parents)
+
+Upon expanding the target position, reconstruct the shortest fast by backtracking through parents until the start position is reached.
+"""
 function buildpath(v::TPos, parents::Dict{TPos, Union{TPos, Nothing}})
     path = Path([v[2]])
     curr = v
@@ -106,17 +112,11 @@ function buildpath(v::TPos, parents::Dict{TPos, Union{TPos, Nothing}})
 end
 
 
-function astar(
-    start       :: Pos, 
-    target      :: Pos, 
-    instance    :: MRMPInstance, 
-    constraints :: Vector{Constraint}
-)
-    h(src, dst, target, time) = createheuristic(src, dst, target, time, constraints)
-    astar(start, target, instance; heuristic=h)
-end
+"""
+    createheuristic(src, dst, target, time, constraints)
 
-
+Given a list of `constraints`, create a modified version of the manhattan distance heuristic where vertices corresponding to constraints have a cost of `Inf`.
+"""
 function createheuristic(src::Pos, dst::Pos, target::Pos, time::Int, constraints::Vector{Constraint})
     penalty = 0
 

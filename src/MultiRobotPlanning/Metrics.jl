@@ -11,6 +11,11 @@ export
     κ
 
 
+"""
+    makespan(solution, type)
+
+Compute the makespan of the given solution: the longest path of any one robot in the solution. `type` determines if the solution is given in `:solution` form or `:plan` form.
+"""
 function makespan(solution::Union{Plan, Solution}, type::Symbol)
     if type == :plan
         maximum([ length(path) for path in solution ])
@@ -20,6 +25,11 @@ function makespan(solution::Union{Plan, Solution}, type::Symbol)
 end
 
 
+"""
+    totaldist(solution, type)
+
+Compute the total distance of the given solution: the sum of all path lengths in the solution. `type` determines if the solution is given in `:solution` form or `:plan` form.
+"""
 function totaldist(solution::Union{Plan, Solution}, type::Symbol)
     nmoves = 0
 
@@ -51,6 +61,11 @@ function totaldist(solution::Union{Plan, Solution}, type::Symbol)
 end
 
 
+"""
+    κ(G, path)
+
+Compute the observed degree of coupling based on the given `path` through the configuration-space `G`.
+"""
 function κ(G::ConfigGraph, path::Vector{Vertex})
     kappas = []
 
@@ -76,6 +91,11 @@ function κ(G::ConfigGraph, path::Vector{Vertex})
 end
 
 
+"""
+    κ(solution, constraints, instance)
+
+Compute the observed degree of coupling based on the given set of `constraints`.
+"""
 function κ(solution::Solution, constraints::Vector{Constraint}, instance::MRMPInstance)
     adjacencies = Dict{Config, Vector{Config}}()
 
@@ -124,6 +144,11 @@ function κ(solution::Solution, constraints::Vector{Constraint}, instance::MRMPI
 end
 
 
+"""
+    matchconstraint(robot, time, src, pos, dst, constraint)
+
+Determine if the `constraint` corresponds to the given `robot`, `time`, `src` and `dst`.
+"""
 function matchconstraint(robot::Int, time::Int, src::Pos, dst::Pos, constraint::Constraint)
     if isa(constraint, ClashConstraint)
         constraint.robot == robot && constraint.time == time && constraint.pos == dst
@@ -131,15 +156,6 @@ function matchconstraint(robot::Int, time::Int, src::Pos, dst::Pos, constraint::
         constraint.robot == robot && constraint.time == time && constraint.src == src && constraint.dst == dst
     end
 end
-
-
-# function κ(G::ConfigGraph)
-#     kappas = [ length(v.collset) for v in values(G) ]
-#     min = minimum(kappas)
-#     max = maximum(kappas)
-#     mean = sum(kappas) / length(kappas)
-#     (min, max, mean)
-# end
 
 
 end

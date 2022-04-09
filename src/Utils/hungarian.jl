@@ -1,3 +1,5 @@
+# The following implementation is adapted from https://github.com/Gnimuc/Hungarian.jl
+
 using LinearAlgebra
 using SparseArrays
 
@@ -13,6 +15,7 @@ const PRIME = Int8(3)
 
 """
     hungarian(costMat) -> (assignment, cost)
+
 Find an optimal solution of the rectangular assignment problem represented by
 the ``N x M`` matrix `costMat`. Return the optimal column indices and
 corresponding minimal cost.
@@ -21,6 +24,7 @@ The zero element in the return value `assignment` means that these workers have
 no assigned job.
 Elements in the matrix can be set to `missing`. In this case, the corresponding
 matching cannot be considered by the algorithm.
+
 # Examples
 ```julia
 julia> A = [ 24     1     8;
@@ -51,8 +55,10 @@ function hungarian(costMat::AbstractMatrix)
     matching = munkres(costMatrix)
     assignment = zeros(Int, rowNum)
     rows = rowvals(matching)
+
     for c = 1:size(matching,2), i in nzrange(matching, c)
         r = rows[i]
+
         if matching[r,c] == STAR
             if rowNum ≤ colNum
                 assignment[r] = c
@@ -61,16 +67,20 @@ function hungarian(costMat::AbstractMatrix)
             end
         end
     end
+
     # calculate minimum cost
     cost = sum(costMat[i...] for i in zip(1:rowNum, assignment) if i[2] != 0)
+
     return assignment, cost
 end
 
 
 """
     munkres(costMat) -> Zs
+
 Find an optimal solution of the assignment problem represented by the square
 matrix `costMat`. Return an sparse matrix illustrating the optimal matching.
+
 # Examples
 ```julia
 julia> costMat = ones(3, 3) - eye(3, 3)
@@ -127,9 +137,11 @@ function munkres(costMat::AbstractMatrix{T}) where {T<:Real}
     #  do the same for each row."
     @inbounds for i = 1:rowNum
         m = costMat[i, 1]
+
         @simd for j = 2:colNum
             m = min(m, costMat[i, j])
         end
+
         Δrow[i] = -m
     end
 
@@ -139,6 +151,7 @@ function munkres(costMat::AbstractMatrix{T}) where {T<:Real}
     if rowNum == colNum
         @inbounds for j = 1:colNum
             m = costMat[1, j] + Δrow[1]
+
             @simd for i = 2:rowNum
                 m = min(m, costMat[i, j] + Δrow[i])
             end
@@ -156,8 +169,10 @@ function munkres(costMat::AbstractMatrix{T}) where {T<:Real}
         # "consider a zero Z of the matrix;"
         r, c = ii.I
         cost = costMat[r, c] + Δrow[r] + Δcol[c]
+
         if cost == 0
             Zs[r, c] = Z
+
             # "if there is no starred zero in its row and none in its column, star Z.
             #  repeat, considering each zero in the matrix in turn;"
             if !colSTAR[c] && !rowSTAR[r]
@@ -216,6 +231,7 @@ function munkres(costMat::AbstractMatrix{S}) where {T<:Real,S<:Union{Missing,T}}
     rows = rowvals(assignment)
     for c = 1:colLen, i in nzrange(assignment, c)
         r = rows[i]
+
         if assignment[r, c] == STAR && ismissing(costMat[r, c])
             assignment[r, c] = Z # standard zero, no assignment made
         end
@@ -231,9 +247,11 @@ so only K columns are counted here, where K = min(size(Zs))
 """
 function exit_criteria(colCovered, ZsDims)
     count = 0
+
     @inbounds for i in eachindex(colCovered)
         colCovered[i] && (count += 1)
     end
+
     if count == ZsDims[1]
         # algorithm exits
         return 0
@@ -252,14 +270,17 @@ function step1!(Zs, rowCovered, colCovered, rowSTAR, row2colSTAR)
     rows = rowvals(Zs)
     # step 1:
     zeroCoveredNum = 0
+
     # "repeat until all zeros are covered."
     while zeroCoveredNum < nnz(Zs)
         zeroCoveredNum = 0
         for c = 1:colLen, i in nzrange(Zs, c)
             r = rows[i]
+
             # "choose a non-covered zero and prime it"
             if colCovered[c] == false && rowCovered[r] == false
                 Zs[r, c] = PRIME
+
                 # "consider the row containing it."
                 # "if there is a starred zero Z in this row"
                 if rowSTAR[r]
@@ -289,27 +310,33 @@ function step2!(Zs, sequence, rowCovered, colCovered, rowSTAR, row2colSTAR)
     rows = rowvals(Zs)
     # step 2:
     flag = false
+
     # "there is a sequence of alternating primed and starred zeros, constructed
     #  as follows:"
     # "let Z₀ denote the uncovered 0′.[there is only one.]"
     for c = 1:ZsDims[2], i in nzrange(Zs, c)
         r = rows[i]
+
         # note that Z₀ is an **uncovered** 0′
         if Zs[r, c] == PRIME && colCovered[c] == false && rowCovered[r] == false
             # push Z₀(uncovered 0′) into the sequence
             push!(sequence, (r, c))
+
             # "let Z₁ denote the 0* in the Z₀'s column.(if any)"
             # find 0* in Z₀'s column
             for j in nzrange(Zs, c)
                 Z₁r = rows[j]
+
                 if Zs[Z₁r, c] == STAR
                     # push Z₁(0*) into the sequence
                     push!(sequence, (Z₁r, c))
                     # set sequence continue flag => true
                     flag = true
+
                     break
                 end
             end
+
             break
         end
     end
@@ -319,22 +346,27 @@ function step2!(Zs, sequence, rowCovered, colCovered, rowSTAR, row2colSTAR)
     while flag
         flag = false
         r = sequence[end][1]
+
         # find Z₂ in Z₃'s row (always exits)
         for c = 1:ZsDims[2]
             if Zs[r, c] == PRIME
                 # push Z₂ into the sequence
                 push!(sequence, (r, c))
+
                 # find 0* in Z₂'s column
                 for j in nzrange(Zs, c)
                     Z₃r = rows[j]
+
                     if Zs[Z₃r, c] == STAR
                         # push Z₃(0*) into the sequence
                         push!(sequence, (Z₃r, c))
                         # set sequence continue flag => true
                         flag = true
+
                         break
                     end
                 end
+
                 break
             end
         end
@@ -356,10 +388,12 @@ function step2!(Zs, sequence, rowCovered, colCovered, rowSTAR, row2colSTAR)
 
     for c = 1:ZsDims[2], i in nzrange(Zs, c)
         r = rows[i]
+
         # "erase all primes;"
         if Zs[r, c] == PRIME
             Zs[r, c] = Z
         end
+
         # "and cover every column containing a 0*."
         if Zs[r, c] == STAR
             colCovered[c] = true
@@ -378,8 +412,21 @@ end
 """
 Step 3 of the original Munkres' Assignment Algorithm
 """
-function step3!(costMat::AbstractMatrix{T}, Zs, minLocations, rowCovered, colCovered, rowSTAR, row2colSTAR,
-                Δrow, Δcol, rowCoveredIdx, colCoveredIdx, rowUncoveredIdx, colUncoveredIdx) where T <: Real
+function step3!(
+    costMat::AbstractMatrix{T}, 
+    Zs, 
+    minLocations, 
+    rowCovered, 
+    colCovered, 
+    rowSTAR, 
+    row2colSTAR,
+    Δrow, 
+    Δcol, 
+    rowCoveredIdx, 
+    colCoveredIdx, 
+    rowUncoveredIdx, 
+    colUncoveredIdx
+) where T <: Real
     # step 3(Step C):
     # "let h denote the smallest uncovered element of the matrix;
     #  add h to each covered row; then subtract h from each uncovered column."
@@ -410,11 +457,13 @@ function step3!(costMat::AbstractMatrix{T}, Zs, minLocations, rowCovered, colCov
     h = typemax(T)
     @inbounds for j in colUncoveredIdx, i in rowUncoveredIdx
         cost = costMat[i, j] + Δcol[j] + Δrow[i]
+
         if cost <= h
             if cost != h
                 h = cost
                 empty!(minLocations)
             end
+
             push!(minLocations, (i, j))
         end
     end
@@ -432,15 +481,19 @@ function step3!(costMat::AbstractMatrix{T}, Zs, minLocations, rowCovered, colCov
     for loc in minLocations
         Zs[loc...] = Z
     end
+
     # reduce old zeros
     rows = rowvals(Zs)
+
     for c in colCoveredIdx, i in nzrange(Zs, c)
         r = rows[i]
+
         if rowCovered[r]
             if Zs[r, c] == STAR
                 rowSTAR[r] = false
                 delete!(row2colSTAR, r)
             end
+
             Zs[r, c] = NON
         end
     end

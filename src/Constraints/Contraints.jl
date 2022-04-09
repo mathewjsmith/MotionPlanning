@@ -14,6 +14,9 @@ export
     constraintstomatrix
 
 
+"""
+ Enforces that `robot` cannot move onto `pos` at `time`.
+"""
 struct ClashConstraint
     time  :: Int
     pos   :: Pos
@@ -23,6 +26,9 @@ end
 Base.:(==)(a::ClashConstraint, b::ClashConstraint) = a.time == b.time && a.pos == b.pos
 
 
+"""
+Enforces that `robot` cannot move onto `dst` *from* `src` at `time`.
+"""
 struct OverlapConstraint
     time  :: Int
     src   :: Pos
@@ -36,9 +42,28 @@ Base.:(==)(a::OverlapConstraint, b::OverlapConstraint) = a.time == b.time && a.s
 const Constraint = Union{ClashConstraint, OverlapConstraint}
 
 
+"""
+A 4d matrix representing the space of possible constraints for an instance.
+
+`constmat[r, x, y, t]` holds an integer `c` encoding which constraints are active for robot `r` at position `(x, y)` and time `t`.
+- If `c == 0`, no constraints are active.
+- If `c % 2 == 0`, the corresponding clash constraint is active.
+- If `c % 3 == 0`, `r` cannot move *north* onto `(x, y)` at time `t`.
+- If `c % 5 == 0`, `r` cannot move *south* onto `(x, y)` at time `t`.
+- If `c % 7 == 0`, `r` cannot move *east* onto `(x, y)` at time `t`.
+- If `c % 11 == 0`, `r` cannot move *west* onto `(x, y)` at time `t`.
+- If `c % 13 == 0`, `r` cannot move *remain* on `(x, y)` at time `t`.
+
+This prime number encoding is used to enable the `ConstraintMatrix` to be used as the encoding for the chromosome in a genetic algorithm.
+"""
 const ConstraintMatrix = SparseArray{Int16, 4}
 
 
+"""
+    constraintstomatrix(constraints, dims)
+
+Convert a list of `constraints` to a constraint matrix.
+"""
 function constraintstomatrix(constraints::Vector{Constraint}, dims::NTuple{4, Int})
     mat = SparseArray{Int16, 4}(zeros(dims))
 
@@ -64,6 +89,11 @@ function constraintstomatrix(constraints::Vector{Constraint}, dims::NTuple{4, In
 end
 
 
+"""
+    isconstraint(r, src, dst, t, mat)
+
+Determine if the constraint corresponding to `(r, src, dst, t)` is constrained.
+"""
 function isconstrained(r::Int, src::Pos, dst::Pos, t::Int, mat::ConstraintMatrix)
     src = src .+ 1
     dst = dst .+ 1
@@ -82,40 +112,11 @@ function isconstrained(r::Int, src::Pos, dst::Pos, t::Int, mat::ConstraintMatrix
 end
 
 
-# function getconstraints(mat::ConstraintMatrix, r, x, y, t)
-#     constraintsfromint(r, x, y, t, mat[r, x, y, t])
-# end
+"""
+    dirvalue(dir)
 
-
-# constraintsfromint(r, x, y, t, i) = filter(!isnothing, [
-#     i % 2  == 0 ? ClashConstraint(t, (x, y), r) : nothing,
-#     i % 3  == 0 ? OverlapConstraint(t, getadjacent(v, :north),  v, r) : nothing,
-#     i % 5  == 0 ? OverlapConstraint(t, getadjacent(v, :south),  v, r) : nothing,
-#     i % 7  == 0 ? OverlapConstraint(t, getadjacent(v, :east),   v, r) : nothing,
-#     i % 11 == 0 ? OverlapConstraint(t, getadjacent(v, :west),   v, r) : nothing,
-#     i % 13 == 0 ? OverlapConstraint(t, getadjacent(v, :remain), v, r) : nothing
-# ])
-
-
-# function getadjacent(pos::Pos, dir::Symbol)
-#     x, y = pos
-
-#     if dir == :north
-#         (x, y - 1)
-#     elseif dir == :south
-#         (x, y + 1)
-#     elseif dir == :east
-#         (x + 1, y)
-#     elseif dir == :west
-#         (x - 1, y)
-#     elseif dir == :remain
-#         (x, y)
-#     else
-#         nothing
-#     end
-# end
-
-
+Convert a direction encoded as a symbol (e.g. `:north`) into its corresponding prime number encoding.
+"""
 function dirvalue(dir::Symbol)
     if dir == :north
         3
@@ -134,7 +135,9 @@ end
 
 
 """
-Returns the direction of a move from `src` to `dst`.
+    direction(src, dst)
+
+Determine the direction of a move from `src` to `dst`.
 """
 function direction(src::Pos, dst::Pos)
     a, b = src

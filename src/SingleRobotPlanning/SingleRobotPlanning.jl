@@ -1,7 +1,6 @@
 module SingleRobotPlanning
 
 include("astar.jl")
-include("extensionplanner.jl")
 
 using MotionPlanning.Constraints
 using MotionPlanning.Collisions
@@ -11,23 +10,30 @@ using OffsetArrays
 using DataStructures: haskey, isempty
 
 export
-    # shortestpaths,
     astar,
-    ep,
     manhattandist,
     validmoves,
     neighbours,
     direction
-    # sacbs
 
 
-function manhattandist(start::Pos, target::Pos)
-    (xs, ys) = start
-    (xt, yt) = target
+"""
+    manhattandist(a, b)
+
+Compute the 1-norm a.k.a. manhattan distance between positions `a` and `b`.
+"""
+function manhattandist(a::Pos, b::Pos)
+    (xs, ys) = a
+    (xt, yt) = b
     float(abs(xs - xt) + abs(ys - yt))
 end
 
 
+"""
+    neighbours(cell, instance)
+
+Compute the positions adjacent to the given `cell`. If the given `instance` is bounded, positions outsides the instances dimensions are excluded.
+"""
 function neighbours(cell::Pos, instance::MRMPInstance)
     x, y = cell
 
@@ -46,6 +52,11 @@ function neighbours(cell::Pos, instance::MRMPInstance)
 end
 
 
+"""
+    validmoves(pos, instance; time=1)
+
+Determine the valid moves for a robot from the given `pos`. That is, the neighbours of `pos`, excluding those containing obstacles. If the `instance` has dynamic obstacles, a `time` should be specified.
+"""
 function validmoves(pos::Pos, instance::MRMPInstance; time=1)
     if isdynamic(instance.obstacles)
         nobsts    = length(instance.obstacles)
@@ -77,6 +88,11 @@ function validmoves(pos::Pos, instance::MRMPInstance; time=1)
 end
 
 
+"""
+    validmoves(r, pos, t, instance, constmat, instance)
+
+Determine the valid moves for robot `r` from `pos` at time `t`. That is, the neighbours of `pos`, excluding those containing obstacles, while obeying the constraints specified in `constmat`.
+"""
 function validmoves(r::Int, pos::Pos, t::Int, constmat::ConstraintMatrix, instance::MRMPInstance)
     moves = neighbours(pos, instance)
     moves = filter(dst -> !isconstrained(r, pos, dst, t, constmat), moves)

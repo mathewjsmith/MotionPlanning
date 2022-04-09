@@ -15,6 +15,9 @@ using MotionPlanning.Model
 using OffsetArrays
 
 
+"""
+Represents a clash collision: the `robots` all landed on `pos` at `time`.
+"""
 struct Clash
     time   :: Int
     pos    :: Pos
@@ -22,6 +25,9 @@ struct Clash
 end
 
 
+"""
+Represents an overlap collision: at `time`, `onrobot` moved from `onsrc` to `ondst`, while `offrobot` moved from `ondst` to `offdst` in a different direction.
+"""
 struct Overlap
     time     :: Int
     onsrc    :: Pos
@@ -36,7 +42,9 @@ const Collision = Union{Clash, Overlap}
 
 
 """
-Returns all collisions in the solution.
+    findcollisions(solution, instance[, ignoreobstacles=false])
+
+Find all collisions ocurring in `solution`.
 """
 function findcollisions(solution::Solution, instance::MRMPInstance; ignoreobstacles=false)
     collisions = Set{Collision}()
@@ -52,7 +60,9 @@ end
 
 
 """
-Returns the collisions occurring during the transation from `srconfig` to `dstconfig`.
+    findcollisions(srcconfig, dstconfig, instance[, ignoreobstacles=false, time=0])
+
+Find collisions occurring during the transition from `srconfig` to `dstconfig`.
 """
 function findcollisions(srcconfig::Config, dstconfig::Config, instance::MRMPInstance; ignoreobstacles=false, time=0)
     clashes  = findclashes(dstconfig, instance; ignoreobstacles=ignoreobstacles, time=time + 1)
@@ -62,7 +72,9 @@ end
 
 
 """
-Returns true if there are any collisions in the solution.
+    hascollisions(solution, instance[, ignoreobstacles=false])
+
+Determine if there are any collisions in `solution`.
 """
 function hascollisions(solution::Solution, instance::MRMPInstance; ignoreobstacles=false)
     for time in 1:(length(solution) - 1)
@@ -79,7 +91,9 @@ end
 
 
 """
-A clash occurs when two robots are trying to move into the same cell.
+    findclashes(config, instance[, ignoreobstacles=false, time=0])
+
+Find clash collisions ocurring in `config`.
 """
 function findclashes(config::Config, instance::MRMPInstance; ignoreobstacles=false, time=0)
     targets = Dict{Pos, Set{Union{Int64, Nothing}}}()
@@ -105,7 +119,9 @@ end
 
 
 """
-An overlap occurs when robot A wants to move into a cell, but there is another robot currently in that cell moving in a different direction.
+    findoverlaps(srcconfig, dstconfig, instance[, ignoreobstacles=false, time=0])
+
+Find overlap collisions ocurring in the transition from `srcconfig` to `dstconfig`.
 """
 function findoverlaps(srcconfig::Config, dstconfig::Config, instance::MRMPInstance; ignoreobstacles=false, time=0)
     overlaps = Vector{Overlap}()
@@ -147,7 +163,9 @@ end
 
 
 """
-Returns the direction of a move from `src` to `dst`.
+    direction(src, dst)
+
+Compute the direction of a move from `src` to `dst`.
 """
 function direction(src::Pos, dst::Pos)
     a, b = src
@@ -168,13 +186,16 @@ end
 
 
 """
-Returns a dictionary mapping positions to the direction that the occupying robot intends to move.
+    directionmatrix(srcconfig, dstconfig, instance[, ignoreobstacles=true, time=0])
+
+Create a dictionary mapping positions in `srcconfig` to the direction in which their occupying robots move in the transition to `dstconfig`.
 """
-function directionmatrix(src_config::Config, dst_config::Config, instance::MRMPInstance; ignoreobstacles=false, time=0)
+function directionmatrix(srcconfig::Config, dstconfig::Config, instance::MRMPInstance; ignoreobstacles=false, time=0)
     matrix = Dict{Pos, Symbol}()
 
-    for r in 1:length(src_config)
-        matrix[src_config[r]] = direction(src_config[r], dst_config[r])
+
+    for r in 1:length(srcconfig)
+        matrix[srcconfig[r]] = direction(srcconfig[r], dstconfig[r])
     end
 
     if isdynamic(instance.obstacles) && !ignoreobstacles
